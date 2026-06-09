@@ -140,7 +140,27 @@ Copia il valore stampato in `SPOTIFY_REFRESH_TOKEN`:
 2. Mettili in **`/public`**.
 3. In `site.config.ts` → `intro`: imposta `videoSrc: '/intro.mp4'`, `videoWebm: '/intro.webm'`, `poster: '/poster.jpg'`.
 
-Lo scroll farà da timeline (scrubbing reversibile). Tieni il file **breve e leggero** (~2–6 MB) con molti keyframe, così il seek è fluido.
+Lo scroll farà da timeline (scrubbing reversibile).
+
+### ⚡ Scrubbing fluido (fondamentale)
+
+Lo scatto/“frame saltati” durante lo scroll dipende dai **keyframe radi**: per saltare a un istante qualsiasi il browser deve decodificare dal keyframe precedente. La soluzione è ri-encodare il video con **un keyframe per ogni frame** (all-intra) con [ffmpeg](https://ffmpeg.org):
+
+```bash
+ffmpeg -i originale.mp4 -an \
+  -vf "scale=1920:-2,format=yuv420p" \
+  -c:v libx264 -profile:v high -g 1 -keyint_min 1 -sc_threshold 0 \
+  -preset slow -crf 20 -movflags +faststart public/intro.mp4
+```
+
+- `-g 1` = keyframe ovunque → **seek istantaneo** (niente più scatti).
+- `-an` = niente audio (l'intro è muta). `+faststart` = ottimizzato per il web.
+- Il file pesa un po' di più, ma lo scrubbing diventa liscio. Per il mobile puoi fare una versione `scale=1280:-2`.
+
+Lato sito puoi regolare in `site.config.ts → intro`:
+- **`scrollVh`** (es. 650) → più alto = animazione più **lenta/fluida**;
+- **`smoothing`** (es. 0.09) → più basso = più morbido/cinematografico;
+- **`filter`**, **`gradeColor`**, **`gradeOpacity`** → color grade noir sui fotogrammi.
 
 ### Produrre il video in Blender (sintesi)
 

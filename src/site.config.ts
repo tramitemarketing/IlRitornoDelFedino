@@ -32,10 +32,38 @@ export const siteConfig = {
 
   /** Intro animata (schermata nera col titolo -> video -> nero) */
   intro: {
-     videoSrc: '/intro.mp4',
-     videoWebm: '/intro.webm',
-     poster: '/poster.jpg',
-   },
+    /** Titolo mostrato sullo schermo nero iniziale */
+    titleScreen: 'Il Ritorno del Fedino',
+    /** Sottotitolo opzionale sotto il titolo iniziale */
+    titleSub: 'di Iacopo Fedi',
+    /**
+     * Video dell'intro (scrubbato dallo scroll, reversibile).
+     * Se vuoto, parte la scena vettoriale di fallback (canvas).
+     */
+    videoSrc: '/intro.mp4',
+    videoWebm: '/intro.webm',
+    /** Immagine poster (ultimo frame), opzionale */
+    poster: '/poster.jpg',
+    /**
+     * Lunghezza dello scroll dell'intro in unità vh.
+     * Più alto = animazione più LENTA e fluida (più scroll per scorrere il video).
+     */
+    scrollVh: 650,
+    /**
+     * Quanto "ammorbidire" lo scrubbing: 0.06 = molto fluido/lento,
+     * 0.2 = più reattivo. Valori bassi = più cinematografico.
+     */
+    smoothing: 0.09,
+    /**
+     * Filtri CSS applicati ai fotogrammi del video (color grade noir).
+     * Esempi: 'contrast(1.15) brightness(0.85) saturate(0.8)'
+     */
+    filter: 'contrast(1.12) brightness(0.82) saturate(0.8)',
+    /** Velo di colore (grade) sopra il video. Vuoto '' per disattivarlo. */
+    gradeColor: '#04282e',
+    /** Intensità del velo di colore (0–1) */
+    gradeOpacity: 0.28,
+  },
 
   /** Sezione podcast */
   podcast: {

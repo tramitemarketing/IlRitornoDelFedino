@@ -4,7 +4,13 @@ const { intro } = siteConfig;
 const hasVideo = intro.videoSrc.trim() !== '';
 ---
 
-<section class="intro" id="home" data-has-video={hasVideo ? 'true' : 'false'}>
+<section
+  class="intro"
+  id="home"
+  data-has-video={hasVideo ? 'true' : 'false'}
+  data-smoothing={String(intro.smoothing)}
+  style={`--intro-scroll: ${intro.scrollVh}vh`}
+>
   <div class="intro__stage">
     {hasVideo ? (
       <video
@@ -15,12 +21,21 @@ const hasVideo = intro.videoSrc.trim() !== '';
         preload="auto"
         poster={intro.poster || undefined}
         aria-hidden="true"
+        style={intro.filter ? `filter: ${intro.filter}` : undefined}
       >
         {intro.videoWebm && <source src={intro.videoWebm} type="video/webm" />}
         <source src={intro.videoSrc} type="video/mp4" />
       </video>
     ) : (
       <canvas id="alley-canvas" class="intro__media" aria-hidden="true"></canvas>
+    )}
+
+    <!-- Velo di colore (grade noir) sopra i frame del video -->
+    {hasVideo && intro.gradeColor && (
+      <div
+        class="intro__grade"
+        style={`background:${intro.gradeColor}; opacity:${intro.gradeOpacity}`}
+      ></div>
     )}
 
     <!-- Velo nero: schermata iniziale + dissolvenza finale -->
@@ -60,6 +75,22 @@ const hasVideo = intro.videoSrc.trim() !== '';
     height: 100%;
     object-fit: cover;
     display: block;
+  }
+
+  /* Velo di colore (grade) + vignettatura sopra il video */
+  .intro__grade {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+  }
+  .intro__grade::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(70% 60% at 50% 45%, transparent 40%, rgba(0, 0, 0, 0.6));
+    mix-blend-mode: normal;
   }
 
   .intro__black {
@@ -184,16 +215,30 @@ const hasVideo = intro.videoSrc.trim() !== '';
     // ---------------- MODalità VIDEO ----------------
     function setupVideo(v: HTMLVideoElement) {
       let duration = 0;
+      // Fattore di ammorbidimento (da data-smoothing); più basso = più fluido/lento
+      const smoothing = Math.min(0.5, Math.max(0.03, Number(section!.dataset.smoothing) || 0.09));
+      let cur = 0;        // tempo "ammorbidito" mostrato
+      let target = 0;     // tempo desiderato dallo scroll
+
       v.pause();
-      v.addEventListener('loadedmetadata', () => (duration = v.duration || 0));
+      const onMeta = () => {
+        duration = v.duration || 0;
+        cur = v.currentTime || 0;
+      };
+      v.addEventListener('loadedmetadata', onMeta);
+      if (v.readyState >= 1) onMeta();
 
       function frame() {
         const p = progressNow();
         updateOverlays(p);
         if (duration > 0) {
-          const target = clamp(sceneProgress(p)) * duration;
-          if (Math.abs((v.currentTime || 0) - target) > 0.03) {
-            try { v.currentTime = target; } catch {}
+          target = clamp(sceneProgress(p)) * duration;
+          // interpolazione: il tempo insegue dolcemente il target
+          cur += (target - cur) * smoothing;
+          if (Math.abs(target - cur) < 0.004) cur = target;
+          // un solo seek alla volta: evita l'accumulo che fa "saltare" i frame
+          if (!v.seeking && Math.abs((v.currentTime || 0) - cur) > 0.012) {
+            try { v.currentTime = cur; } catch {}
           }
         }
         raf = requestAnimationFrame(frame);
