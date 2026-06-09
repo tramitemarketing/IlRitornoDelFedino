@@ -29,7 +29,8 @@ const diagMap: Record<FetchStatus, string> = {
     'Credenziali Spotify non rilevate durante la pubblicazione: aggiungi SPOTIFY_CLIENT_ID e SPOTIFY_CLIENT_SECRET nelle Environment Variables (Production) e fai un nuovo deploy.',
   'token-error':
     'Spotify ha rifiutato le credenziali (token): ricontrolla Client ID e Client Secret.',
-  'api-error': 'Errore nella richiesta degli episodi a Spotify (controlla showId/market).',
+  'api-error':
+    'Spotify blocca la lista episodi senza login utente. Configura SPOTIFY_REFRESH_TOKEN (npm run spotify:auth, vedi README) e rifai il deploy.',
   'network-error': 'Errore di rete verso Spotify durante la pubblicazione.',
 };
 const diagMessage = diagMap[status]

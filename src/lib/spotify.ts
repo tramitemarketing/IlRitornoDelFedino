@@ -68,6 +68,20 @@ async function getToken(): Promise<TokenResult> {
     );
     return { error: 'no-creds' };
   }
+  // I podcast richiedono un TOKEN UTENTE: se c'è il refresh token lo usiamo
+  // (niente 403), altrimenti ripieghiamo sul Client Credentials (solo musica).
+  const refresh = clean(
+    import.meta.env.SPOTIFY_REFRESH_TOKEN ?? process.env.SPOTIFY_REFRESH_TOKEN,
+  );
+  const body = refresh
+    ? `grant_type=refresh_token&refresh_token=${encodeURIComponent(refresh)}`
+    : 'grant_type=client_credentials';
+  if (!refresh) {
+    console.warn(
+      '[spotify] Nessun SPOTIFY_REFRESH_TOKEN: uso Client Credentials, ma la lista ' +
+        'episodi dei podcast verrà rifiutata da Spotify (403). Esegui "npm run spotify:auth".',
+    );
+  }
   try {
     const basic = Buffer.from(`${creds.id}:${creds.secret}`).toString('base64');
     const res = await fetch(TOKEN_URL, {
@@ -76,7 +90,7 @@ async function getToken(): Promise<TokenResult> {
         Authorization: `Basic ${basic}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: 'grant_type=client_credentials',
+      body,
     });
     if (!res.ok) {
       console.warn(`[spotify] Token non ottenuto (HTTP ${res.status}).`);

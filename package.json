@@ -8,6 +8,7 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "spotify:auth": "node scripts/spotify-auth.mjs",
     "astro": "astro"
   },
   "dependencies": {

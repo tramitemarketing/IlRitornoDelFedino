@@ -113,10 +113,24 @@ La griglia si popola da sola al build. Serve un'app Spotify (gratis):
 
 1. Vai su [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) → **Create app**.
 2. Copia **Client ID** e **Client Secret**.
-3. In locale: copia `.env.example` in **`.env`** e incolla i valori.
-4. Su **Netlify/Vercel**: aggiungi `SPOTIFY_CLIENT_ID` e `SPOTIFY_CLIENT_SECRET` nelle *Environment Variables* del progetto.
+3. In **Edit Settings** dell'app aggiungi il **Redirect URI**: `http://127.0.0.1:8888/callback`.
+4. Su **Netlify/Vercel**: aggiungi `SPOTIFY_CLIENT_ID` e `SPOTIFY_CLIENT_SECRET` nelle *Environment Variables*.
 
-> Senza credenziali la build non fallisce: il sito mostra il **player unico** dello show (tutti gli episodi, comunque ascoltabili). La griglia si aggiorna a ogni nuovo build/deploy.
+### Refresh token (obbligatorio per i podcast)
+
+Spotify **rifiuta** la lista episodi dei podcast con il solo Client Credentials (errore **403**): serve un **token utente**. Si ottiene una volta sola:
+
+```bash
+cp .env.example .env        # incolla CLIENT_ID e CLIENT_SECRET
+npm install
+npm run spotify:auth        # apre il login Spotify, stampa il refresh token
+```
+
+Copia il valore stampato in `SPOTIFY_REFRESH_TOKEN`:
+- in locale → nel file `.env`
+- su **Vercel/Netlify** → nelle *Environment Variables* (Production), poi **Redeploy**.
+
+> La griglia si rigenera a ogni build/deploy. Senza refresh token la build non fallisce: il sito mostra il **player unico** dello show (tutti gli episodi, comunque ascoltabili).
 
 ---
 
