@@ -106,44 +106,60 @@ export async function getShowEpisodes(
   if ('error' in tok) return { episodes: [], status: tok.error, detail: tok.detail };
   const token = tok.token;
 
-  const out: Episode[] = [];
-  try {
-    let url: string | null =
-      `${API}/shows/${showId}/episodes?market=${market}&limit=${Math.min(50, limit)}`;
-    while (url && out.length < limit) {
-      const res: Response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        console.warn(
-          `[spotify] Errore recupero episodi (HTTP ${res.status}) show ${showId}, market ${market}.`,
-        );
-        return { episodes: out, status: 'api-error', detail: `HTTP ${res.status}` };
-      }
-      const data = await res.json();
-      for (const it of data.items ?? []) {
-        if (!it) continue;
-        out.push({
-          id: it.id,
-          name: it.name,
-          description: it.description ?? '',
-          releaseDate: it.release_date ?? '',
-          durationMs: it.duration_ms ?? 0,
-          image: it.images?.[0]?.url ?? null,
-          url: it.external_urls?.spotify ?? `https://open.spotify.com/episode/${it.id}`,
+  const lim = Math.min(50, limit);
+  // Proviamo prima CON market, poi SENZA (alcuni token/show falliscono col market).
+  const starts = [
+    `${API}/shows/${showId}/episodes?market=${market}&limit=${lim}`,
+    `${API}/shows/${showId}/episodes?limit=${lim}`,
+  ];
+
+  let lastDetail = '';
+  for (const start of starts) {
+    const out: Episode[] = [];
+    let url: string | null = start;
+    let failed = false;
+    try {
+      while (url && out.length < limit) {
+        const res: Response = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
         });
+        if (!res.ok) {
+          lastDetail = `HTTP ${res.status}`;
+          console.warn(`[spotify] Errore recupero episodi (${lastDetail}) show ${showId} :: ${start}`);
+          failed = true;
+          break;
+        }
+        const data = await res.json();
+        for (const it of data.items ?? []) {
+          if (!it) continue;
+          out.push({
+            id: it.id,
+            name: it.name,
+            description: it.description ?? '',
+            releaseDate: it.release_date ?? '',
+            durationMs: it.duration_ms ?? 0,
+            image: it.images?.[0]?.url ?? null,
+            url: it.external_urls?.spotify ?? `https://open.spotify.com/episode/${it.id}`,
+          });
+        }
+        url = data.next ?? null;
       }
-      url = data.next ?? null;
+    } catch (e) {
+      console.warn('[spotify] Errore di rete nel recupero episodi:', e);
+      return { episodes: out, status: 'network-error', detail: String(e) };
     }
-  } catch (e) {
-    console.warn('[spotify] Errore di rete nel recupero episodi:', e);
-    return { episodes: out, status: 'network-error', detail: String(e) };
+
+    if (!failed && out.length > 0) {
+      console.log(`[spotify] Episodi recuperati: ${out.length} (show ${showId}).`);
+      return { episodes: out.slice(0, limit), status: 'ok' };
+    }
+    if (!failed && out.length === 0) lastDetail = lastDetail || 'risposta vuota';
   }
 
-  console.log(`[spotify] Episodi recuperati: ${out.length} (show ${showId}).`);
   return {
-    episodes: out.slice(0, limit),
-    status: out.length > 0 ? 'ok' : 'empty',
+    episodes: [],
+    status: lastDetail.startsWith('HTTP') ? 'api-error' : 'empty',
+    detail: lastDetail,
   };
 }
 

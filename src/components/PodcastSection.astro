@@ -13,10 +13,12 @@ const { podcast } = siteConfig;
 // 1) prova il recupero automatico via API (se autoFetch e credenziali)
 let episodes: Episode[] = [];
 let status: FetchStatus = 'empty';
+let detail = '';
 if (podcast.autoFetch) {
   const res = await getShowEpisodes(podcast.showId, podcast.market, podcast.maxEpisodes);
   episodes = res.episodes;
   status = res.status;
+  detail = res.detail ?? '';
 }
 
 // Messaggio diagnostico mostrato in pagina quando la griglia non c'è
@@ -30,7 +32,9 @@ const diagMap: Record<FetchStatus, string> = {
   'api-error': 'Errore nella richiesta degli episodi a Spotify (controlla showId/market).',
   'network-error': 'Errore di rete verso Spotify durante la pubblicazione.',
 };
-const diagMessage = diagMap[status] ?? '';
+const diagMessage = diagMap[status]
+  ? diagMap[status] + (detail ? ` [${detail}]` : '')
+  : '';
 
 // 2) fallback: episodi inseriti a mano nel config
 if (episodes.length === 0 && podcast.episodes.length > 0) {
