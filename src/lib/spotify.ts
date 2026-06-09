@@ -27,16 +27,28 @@ export interface Episode {
 const TOKEN_URL = 'https://accounts.spotify.com/api/token';
 const API = 'https://api.spotify.com/v1';
 
+/** Pulisce un valore env da spazi e virgolette accidentali. */
+function clean(v: string | undefined): string {
+  return (v ?? '').trim().replace(/^['"]|['"]$/g, '');
+}
+
 function getCreds() {
   // Astro/Vite espone le env non-PUBLIC solo lato server/build.
-  const id = import.meta.env.SPOTIFY_CLIENT_ID ?? process.env.SPOTIFY_CLIENT_ID;
-  const secret = import.meta.env.SPOTIFY_CLIENT_SECRET ?? process.env.SPOTIFY_CLIENT_SECRET;
+  const id = clean(import.meta.env.SPOTIFY_CLIENT_ID ?? process.env.SPOTIFY_CLIENT_ID);
+  const secret = clean(import.meta.env.SPOTIFY_CLIENT_SECRET ?? process.env.SPOTIFY_CLIENT_SECRET);
   return id && secret ? { id, secret } : null;
 }
 
 async function getToken(): Promise<string | null> {
   const creds = getCreds();
-  if (!creds) return null;
+  if (!creds) {
+    console.warn(
+      '[spotify] Credenziali assenti al build: SPOTIFY_CLIENT_ID/SECRET non trovate. ' +
+        'Su Vercel/Netlify aggiungile alle Environment Variables (ambiente Production) ' +
+        'e fai un nuovo deploy.',
+    );
+    return null;
+  }
   try {
     const basic = Buffer.from(`${creds.id}:${creds.secret}`).toString('base64');
     const res = await fetch(TOKEN_URL, {
@@ -47,10 +59,17 @@ async function getToken(): Promise<string | null> {
       },
       body: 'grant_type=client_credentials',
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn(
+        `[spotify] Token non ottenuto (HTTP ${res.status}). ` +
+          'Controlla che Client ID/Secret siano corretti.',
+      );
+      return null;
+    }
     const data = await res.json();
     return data.access_token ?? null;
-  } catch {
+  } catch (e) {
+    console.warn('[spotify] Errore di rete nel recupero del token:', e);
     return null;
   }
 }
@@ -76,7 +95,13 @@ export async function getShowEpisodes(
       const res: Response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) break;
+      if (!res.ok) {
+        console.warn(
+          `[spotify] Errore nel recupero episodi (HTTP ${res.status}) per show ${showId}, ` +
+            `market ${market}. Verifica showId e market.`,
+        );
+        break;
+      }
       const data = await res.json();
       for (const it of data.items ?? []) {
         if (!it) continue;
@@ -92,9 +117,11 @@ export async function getShowEpisodes(
       }
       url = data.next ?? null;
     }
-  } catch {
+  } catch (e) {
+    console.warn('[spotify] Errore di rete nel recupero episodi:', e);
     return out;
   }
+  console.log(`[spotify] Episodi recuperati: ${out.length} (show ${showId}).`);
   return out.slice(0, limit);
 }
 
