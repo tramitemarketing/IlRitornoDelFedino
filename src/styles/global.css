@@ -1,25 +1,30 @@
 /* =========================================================
-   DESIGN TOKENS — Tema "dark audio-first"
+   DESIGN TOKENS — Nero puro + turchese petrolio
    ========================================================= */
 :root {
-  /* Palette navy noir (dal piu scuro al piu chiaro) */
-  --ink: #02020a;          /* near-black assoluto */
-  --bg: #02020a;
-  --bg-soft: #030612;
-  --surface: #030a1a;
-  --surface-2: #05204a;    /* blu profondo */
-  --slate: #73819d;        /* unico tono chiaro: grigio-azzurro */
+  /* Base: nero puro quasi ovunque */
+  --ink: #000000;
+  --bg: #000000;
+  --bg-soft: #000000;
+  --surface: #050d0f;       /* card: nero con un soffio di turchese */
+  --surface-2: #04282e;     /* turchese petrolio: bordi, fill, bagliori */
+
+  /* Turchese (accento) */
+  --teal: #04282e;          /* scuro scuro: brand fill/bordi/glow */
+  --teal-bright: #3f9aa6;   /* variante leggibile per testo/link su nero */
+  --teal-glow: #1d6b76;
 
   /* Testo */
-  --text: #e6ebf3;
-  --text-muted: #8b97ad;
-  --text-dim: #5b6678;
+  --text: #eef3f3;
+  --text-muted: #8a9a9c;
+  --text-dim: #4d5c5e;
 
-  /* Accenti (monocromatici sulla palette) */
-  --accent: #73819d;       /* slate */
-  --accent-2: #9fb0cf;     /* slate chiarito, per highlight */
-  --accent-3: #05204a;     /* blu profondo */
-  --glow: 0 0 40px rgba(115, 129, 157, 0.35);
+  /* Compat: vecchi nomi rimappati sulla nuova palette */
+  --slate: #8a9a9c;
+  --accent: #3f9aa6;
+  --accent-2: #5fb9c4;
+  --accent-3: #04282e;
+  --glow: 0 0 44px rgba(29, 107, 118, 0.35);
 
   /* Tipografia */
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -93,7 +98,7 @@ button { font: inherit; cursor: pointer; }
 }
 
 .gradient-text {
-  background: linear-gradient(120deg, #c5cee0, var(--slate), #5a6a8f);
+  background: linear-gradient(120deg, #6fd0da, var(--teal-bright), var(--teal-glow));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

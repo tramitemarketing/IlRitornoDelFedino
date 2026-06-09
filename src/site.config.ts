@@ -30,23 +30,55 @@ export const siteConfig = {
     field: 'Materia da definire',
   },
 
+  /** Intro animata (schermata nera col titolo -> video -> nero) */
+  intro: {
+    /** Titolo mostrato sullo schermo nero iniziale */
+    titleScreen: 'Il Ritorno del Fedino',
+    /** Sottotitolo opzionale sotto il titolo iniziale */
+    titleSub: 'di Iacopo Fedi',
+    /**
+     * Video dell'intro (scrubbato dallo scroll, reversibile).
+     * Metti i file in /public e indica qui i percorsi.
+     * Se vuoto, parte la scena vettoriale di fallback (canvas).
+     * Consiglio: fornisci sia MP4 (H.264) sia WebM (VP9/AV1).
+     */
+    videoSrc: '',          // es: '/intro.mp4'
+    videoWebm: '',         // es: '/intro.webm'
+    /** Immagine poster (ultimo frame nero), opzionale */
+    poster: '',
+  },
+
   /** Sezione podcast */
   podcast: {
     /** Nome del podcast */
-    name: 'Il Ritorno del Fedino — Podcast',
+    name: 'Il Ritorno del Fedino',
     /** Sottotitolo / claim della sezione */
-    subtitle: 'Conversazioni, lezioni e divagazioni. Episodi nuovi ogni settimana.',
+    subtitle: 'Conversazioni, lezioni e divagazioni. Tutti gli episodi, qui.',
     /**
-     * ID dello SHOW Spotify per il player completo della serie.
+     * ID dello SHOW Spotify.
      * Lo trovi nell'URL: open.spotify.com/show/XXXXXXXX
-     * Lascia stringa vuota '' se vuoi mostrare solo i singoli episodi.
+     * Usato sia per il fallback (player unico) sia per recuperare
+     * automaticamente la lista episodi via API (vedi src/lib/spotify.ts).
      */
     showId: '5oWtSGw6X75uomzzW6UK9V',
-    /** Episodi in evidenza (player singoli) */
+    /**
+     * Recupero automatico episodi via Spotify API.
+     * Richiede le variabili d'ambiente SPOTIFY_CLIENT_ID e
+     * SPOTIFY_CLIENT_SECRET (vedi .env.example).
+     */
+    autoFetch: true,
+    /** Mercato per l'API Spotify (codice paese) */
+    market: 'IT',
+    /** Numero massimo di episodi mostrati in griglia */
+    maxEpisodes: 36,
+    /**
+     * Episodi inseriti a mano (fallback se autoFetch è off o l'API
+     * non è disponibile). ID dall'URL open.spotify.com/episode/XXXX
+     */
     episodes: [
       // Esempio: { id: '4rOoJ6Egrf8K2IrywzwOMk', title: 'Episodio pilota' },
     ] as SpotifyEpisode[],
-    /** Link diretto al profilo Spotify (per il bottone "Segui") */
+    /** Link diretto allo show Spotify (bottone "Segui") */
     spotifyUrl: 'https://open.spotify.com/show/5oWtSGw6X75uomzzW6UK9V',
   },
 

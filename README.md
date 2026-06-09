@@ -1,43 +1,42 @@
 # 🎙️ Il Ritorno del Fedino
 
-Sito personale di **Iacopo Fedi** con sezione **podcast embeddata da Spotify**, pensata per massimizzare gli ascolti.
+Sito personale e podcast di **Iacopo Fedi**: intro cinematografica + **griglia di tutti gli episodi** ascoltabili, pensata per massimizzare gli ascolti su Spotify.
 
-Stack: **[Astro 5](https://astro.build)** · tema **dark "audio-first"** · deploy su **Netlify/Vercel**.
+Stack: **[Astro 5](https://astro.build)** · tema **nero puro + turchese petrolio** · deploy su **Netlify/Vercel**.
 
 ---
 
-## 🌟 Concept & idee
+## 🌟 Concept & struttura
 
-L'esperienza è costruita su tre atti, in ordine di importanza:
+L'esperienza è una sequenza in tre atti:
 
-1. **Home = scena noir guidata dallo scroll** 🎬
-   Intro cinematografica in canvas 2D (vettoriale, zero dipendenze): un'**auto scura entra in un vicolo cieco e si accosta al marciapiede**, poi la scena **sfuma al nero e si apre il sito**. Lo scroll è la timeline → l'animazione è **reversibile** (scroll su = l'auto torna indietro). Vista in terza persona, palette navy. Fallback statico su `prefers-reduced-motion`.
-2. **Podcast (Spotify)** 🎧
-   Cuore del progetto per il guadagno ascolti: player **show** completo + **episodi** in evidenza, bottone "Segui su Spotify".
-3. **Bio in fondo, in secondo piano** 👤
-   Biografia sobria e discreta, come da richiesta — il focus resta su animazione e podcast.
+```
+1. SCHERMO NERO  →  "Il Ritorno del Fedino"
+2. ANIMAZIONE    →  auto scura entra nel vicolo cieco e si accosta (scroll = timeline, reversibile)
+3. NERO          →  titolo del podcast + GRIGLIA di tutti gli episodi (responsive, ascoltabili)
+```
 
-### Idee future (facili da aggiungere)
-- 🎥 Sostituire la scena vettoriale con un **video/sequenza pre-renderizzata** scrubbata, per il fotorealismo (l'impianto scroll resta identico).
-- 🔊 Animazione che reagisce **all'audio reale** (Web Audio API) quando si avvia un player.
-- 📨 Newsletter / iscrizione per nuovi episodi.
-- 📝 Sezione **blog/note** in Markdown (Astro Content Collections).
-- 📊 Analytics privacy-friendly (Plausible/Umami) per misurare i click verso Spotify.
-- 🌐 Dominio personalizzato + Open Graph image dedicata per le condivisioni social.
+1. **Intro guidata dallo scroll** 🎬 — schermo nero col titolo, poi la scena scorre (lo scroll è la timeline → **reversibile**) e sfuma di nuovo al nero. Supporta un **video reale scrubbato** (consigliato, vedi sotto); finché non c'è il file, parte una **scena vettoriale di fallback** in canvas. `prefers-reduced-motion` mostra un fotogramma statico.
+2. **Podcast** 🎧 — titolo dello show + **griglia responsive di tutti gli episodi**, recuperati **automaticamente dall'API Spotify**. Ogni card carica il player Spotify **al click** (leggero anche con molti episodi). Senza credenziali API, ricade sul player unico dello show.
+3. **Bio in fondo** 👤 — biografia sobria e discreta + contatti.
+
+### Idee future
+- 🔊 Animazione che reagisce all'**audio reale** (Web Audio API) quando parte un episodio.
+- 📨 Newsletter per i nuovi episodi · 📝 blog/note in Markdown · 📊 analytics privacy-friendly per i click verso Spotify · 🌐 dominio + OG image dedicata.
 
 ---
 
 ## 🎨 Linee guida di stile
 
-| Elemento      | Scelta |
-|---------------|--------|
-| Tema          | Dark noir navy (sfondo `#02020A`) |
-| Palette       | `#02020A` · `#030612` · `#030A1A` · `#05204A` · `#73819D` |
-| Tipografia    | **Space Grotesk** (titoli) · **Inter** (testo) |
-| Tono          | Moderno, immersivo, autorevole ma vivo |
-| Movimento     | Generativo e fluido, ma rispetta `prefers-reduced-motion` |
+| Elemento   | Scelta |
+|------------|--------|
+| Base       | **Nero puro** `#000000` (quasi ovunque) |
+| Accento    | **Turchese petrolio** `#04282E` (bordi, bagliori) + variante leggibile `#3F9AA6` |
+| Tipografia | **Space Grotesk** (titoli) · **Inter** (testo) |
+| Tono       | Noir, cinematografico, immersivo |
+| Movimento  | Scroll-driven e reversibile, rispetta `prefers-reduced-motion` |
 
-I **design token** (colori, font, raggi) sono in [`src/styles/global.css`](src/styles/global.css).
+I **design token** sono in [`src/styles/global.css`](src/styles/global.css).
 
 ---
 
@@ -45,29 +44,28 @@ I **design token** (colori, font, raggi) sono in [`src/styles/global.css`](src/s
 
 ```mermaid
 graph TD
-    A["index.astro<br/>(pagina unica)"] --> B["Base.astro<br/>(layout · SEO · font · reveal)"]
-    B --> H["Hero.astro<br/>🎬 scena noir scroll-driven"]
-    B --> P["PodcastSection.astro<br/>🎧 embed Spotify"]
-    B --> Bio["BioSection.astro<br/>👤 bio + contatti + footer"]
+    A["index.astro"] --> B["Base.astro<br/>layout · SEO · font"]
+    B --> H["Hero.astro<br/>🎬 intro scroll-driven (video/canvas)"]
+    B --> P["PodcastSection.astro<br/>🎧 griglia episodi"]
+    B --> Bio["BioSection.astro<br/>👤 bio + contatti"]
 
-    CFG["site.config.ts<br/>⚙️ contenuti & ID Spotify"] -.alimenta.-> H
-    CFG -.alimenta.-> P
-    CFG -.alimenta.-> Bio
+    CFG["site.config.ts<br/>⚙️ contenuti, ID, video"] -.-> H
+    CFG -.-> P
+    CFG -.-> Bio
+    SPO["lib/spotify.ts<br/>🌐 fetch episodi (API)"] -->|build-time| P
+    ENV[".env<br/>🔑 SPOTIFY_CLIENT_ID/SECRET"] -.-> SPO
+    CSS["global.css<br/>🎨 token"] -.-> B
 
-    CSS["global.css<br/>🎨 design token"] -.stile.-> B
-
-    classDef cfg fill:#12141f,stroke:#6c5ce7,color:#f2f3f8;
-    classDef cmp fill:#0d0f18,stroke:#00e0c6,color:#f2f3f8;
-    class CFG,CSS cfg;
+    classDef cfg fill:#04282e,stroke:#3f9aa6,color:#eef3f3;
+    classDef cmp fill:#050d0f,stroke:#3f9aa6,color:#eef3f3;
+    class CFG,CSS,SPO,ENV cfg;
     class A,B,H,P,Bio cmp;
 ```
 
-### Flusso di pubblicazione
-
 ```mermaid
 flowchart LR
-    Dev["💻 git push<br/>branch claude/elegant-feynman-ivt932"] --> CI["☁️ Netlify / Vercel"]
-    CI -->|"npm run build"| Out["📦 dist/ (statico)"]
+    Dev["💻 git push"] --> CI["☁️ Netlify / Vercel"]
+    CI -->|"npm run build<br/>(+ fetch Spotify)"| Out["📦 dist/"]
     Out --> Web["🌍 Sito live"]
     Web --> Spotify["🎧 Ascolti su Spotify"]
 ```
@@ -78,39 +76,67 @@ flowchart LR
 
 ```
 .
-├── public/
-│   └── favicon.svg            # icona (equalizer gradient)
+├── public/                     # asset statici (metti qui intro.mp4 / intro.webm)
+│   └── favicon.svg
 ├── src/
 │   ├── components/
-│   │   ├── Hero.astro         # 🎬 scena noir scroll-driven (canvas)
-│   │   ├── PodcastSection.astro  # 🎧 embed Spotify
-│   │   └── BioSection.astro   # 👤 bio + contatti + footer
-│   ├── layouts/
-│   │   └── Base.astro         # layout, SEO, font, reveal-on-scroll
-│   ├── pages/
-│   │   └── index.astro        # pagina unica
-│   ├── styles/
-│   │   └── global.css         # design token + utility
-│   └── site.config.ts         # ⚙️ UNICO file per i contenuti
+│   │   ├── Hero.astro          # 🎬 intro scroll-driven (video o canvas)
+│   │   ├── PodcastSection.astro  # 🎧 griglia episodi + fallback
+│   │   └── BioSection.astro    # 👤 bio + contatti + footer
+│   ├── layouts/Base.astro
+│   ├── lib/spotify.ts          # 🌐 recupero episodi via API (build-time)
+│   ├── pages/index.astro
+│   ├── styles/global.css       # 🎨 design token
+│   └── site.config.ts          # ⚙️ UNICO file per i contenuti
+├── .env.example                # 🔑 credenziali Spotify (copia in .env)
 ├── astro.config.mjs
-├── netlify.toml               # config deploy Netlify
+├── netlify.toml
 └── package.json
 ```
 
 ---
 
-## ⚙️ Come personalizzare i contenuti
+## ⚙️ Personalizzare i contenuti
 
-Tutto si modifica in **un solo file**: [`src/site.config.ts`](src/site.config.ts).
+Tutto in [`src/site.config.ts`](src/site.config.ts):
 
-- **Nome / tagline / materia** → `professor`
-- **Podcast** → `podcast`
-  - `showId`: ID dello show Spotify (dall'URL `open.spotify.com/show/XXXX`)
-  - `episodes`: array di episodi in evidenza (ID dall'URL `open.spotify.com/episode/XXXX`)
-- **Biografia** → `bio.paragraphs`
-- **Contatti/social** → `contact` (lascia `''` per nascondere)
+- **`professor`** — nome, tagline, materia
+- **`intro`** — titolo dello schermo nero, e i percorsi del **video** (`videoSrc`, `videoWebm`, `poster`)
+- **`podcast`** — `showId`, `autoFetch`, `market`, `maxEpisodes`, link Spotify
+- **`bio`** / **`contact`** — biografia e social (vuoto = nascosto)
 
-> 💡 Per trovare un ID Spotify: apri l'episodio/show → **Condividi → Copia link**. L'ID è la parte finale dell'URL.
+---
+
+## 🔑 Episodi automatici (Spotify API)
+
+La griglia si popola da sola al build. Serve un'app Spotify (gratis):
+
+1. Vai su [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) → **Create app**.
+2. Copia **Client ID** e **Client Secret**.
+3. In locale: copia `.env.example` in **`.env`** e incolla i valori.
+4. Su **Netlify/Vercel**: aggiungi `SPOTIFY_CLIENT_ID` e `SPOTIFY_CLIENT_SECRET` nelle *Environment Variables* del progetto.
+
+> Senza credenziali la build non fallisce: il sito mostra il **player unico** dello show (tutti gli episodi, comunque ascoltabili). La griglia si aggiorna a ogni nuovo build/deploy.
+
+---
+
+## 🎬 Innestare il video dell'intro
+
+1. Esporta `intro.mp4` (H.264) e idealmente `intro.webm` (VP9/AV1) + un `poster.jpg` (frame nero finale).
+2. Mettili in **`/public`**.
+3. In `site.config.ts` → `intro`: imposta `videoSrc: '/intro.mp4'`, `videoWebm: '/intro.webm'`, `poster: '/poster.jpg'`.
+
+Lo scroll farà da timeline (scrubbing reversibile). Tieni il file **breve e leggero** (~2–6 MB) con molti keyframe, così il seek è fluido.
+
+### Produrre il video in Blender (sintesi)
+
+- **Auto**: modello CC0 (Sketchfab/BlenderKit), vernice scura con *clearcoat*.
+- **Set**: muri semplici + texture PBR (Quixel Megascans), **asfalto bagnato con pozzanghere** (i riflessi fanno l'atmosfera).
+- **Luci**: notte, **un lampione** (tono freddo/turchese), **fari** (spot + emissive), **nebbia volumetrica** (Volume Scatter) per i coni di luce. World nero.
+- **Camera**: 35–50 mm, angolo basso ravvicinato, **DOF** aperta (f/2), micro-movimento "handheld".
+- **Render**: **Cycles** + denoiser OptiX, 1080p/1440p, 24 fps, ~3–5 s, **motion blur ON**.
+- **Post** (compositor o DaVinci Resolve): bloom/glare, grade nero-turchese, grana, vignetta.
+- **Export web**: master ProRes/PNG → encode MP4 (H.264) + WebM. Composizione *center-safe* per il mobile (o un render verticale 9:16 dedicato).
 
 ---
 
@@ -119,25 +145,19 @@ Tutto si modifica in **un solo file**: [`src/site.config.ts`](src/site.config.ts
 Serve [Node.js 20+](https://nodejs.org).
 
 ```bash
-npm install      # installa le dipendenze
-npm run dev      # avvia su http://localhost:4321
-npm run build    # genera il sito statico in dist/
-npm run preview  # anteprima della build
+cp .env.example .env   # (opzionale) credenziali Spotify
+npm install
+npm run dev            # http://localhost:4321
+npm run build          # genera dist/
+npm run preview
 ```
 
 ---
 
 ## ☁️ Deploy
 
-### Netlify
-La config è già pronta in [`netlify.toml`](netlify.toml).
-1. Collega il repo su [netlify.com](https://www.netlify.com).
-2. Build command: `npm run build` · Publish dir: `dist` (già impostati).
-3. Deploy automatico a ogni push.
-
-### Vercel
-1. Importa il repo su [vercel.com](https://vercel.com): rileva Astro in automatico.
-2. Nessuna configurazione necessaria.
+- **Netlify**: config pronta in [`netlify.toml`](netlify.toml) (build `npm run build`, dir `dist`). Ricorda le env Spotify nel dashboard.
+- **Vercel**: importa il repo (rileva Astro in automatico) + aggiungi le env Spotify.
 
 ---
 

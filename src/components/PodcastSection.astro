@@ -1,15 +1,38 @@
 ---
 import { siteConfig } from '../site.config';
+import { getShowEpisodes, formatDuration, formatDate, type Episode } from '../lib/spotify';
+
 const { podcast } = siteConfig;
+
+// 1) prova il recupero automatico via API (se autoFetch e credenziali)
+let episodes: Episode[] = [];
+if (podcast.autoFetch) {
+  episodes = await getShowEpisodes(podcast.showId, podcast.market, podcast.maxEpisodes);
+}
+
+// 2) fallback: episodi inseriti a mano nel config
+if (episodes.length === 0 && podcast.episodes.length > 0) {
+  episodes = podcast.episodes.map((e) => ({
+    id: e.id,
+    name: e.title ?? 'Episodio',
+    description: '',
+    releaseDate: '',
+    durationMs: 0,
+    image: null,
+    url: `https://open.spotify.com/episode/${e.id}`,
+  }));
+}
+
+// 3) ultimo fallback: nessun dato -> player unico dello show
+const hasGrid = episodes.length > 0;
 const hasShow = podcast.showId.trim() !== '';
-const hasEpisodes = podcast.episodes.length > 0;
 ---
 
 <section class="podcast section" id="podcast">
   <div class="container">
-    <div class="podcast__head reveal">
+    <header class="podcast__head reveal">
       <p class="eyebrow">Podcast</p>
-      <h2 class="podcast__title">{podcast.name}</h2>
+      <h2 class="podcast__title gradient-text">{podcast.name}</h2>
       <p class="podcast__subtitle">{podcast.subtitle}</p>
       <a class="podcast__follow" href={podcast.spotifyUrl} target="_blank" rel="noopener noreferrer">
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">
@@ -17,70 +40,92 @@ const hasEpisodes = podcast.episodes.length > 0;
         </svg>
         Segui su Spotify
       </a>
-    </div>
+    </header>
 
-    {hasShow && (
+    {hasGrid && (
+      <ul class="podcast__grid" role="list">
+        {episodes.map((ep) => (
+          <li class="ep reveal" data-ep-id={ep.id}>
+            <button class="ep__media" type="button" aria-label={`Riproduci: ${ep.name}`}>
+              {ep.image ? (
+                <img class="ep__cover" src={ep.image} alt="" loading="lazy" decoding="async" />
+              ) : (
+                <span class="ep__cover ep__cover--ph" aria-hidden="true"></span>
+              )}
+              <span class="ep__play" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+            </button>
+            <div class="ep__body">
+              <h3 class="ep__title">{ep.name}</h3>
+              <p class="ep__meta">
+                {[formatDate(ep.releaseDate), formatDuration(ep.durationMs)].filter(Boolean).join(' · ')}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+
+    {!hasGrid && hasShow && (
       <div class="podcast__player reveal">
         <iframe
           title={`Podcast ${podcast.name}`}
           src={`https://open.spotify.com/embed/show/${podcast.showId}?theme=0`}
           width="100%"
-          height="352"
-          frameborder="0"
+          height="500"
+          style="border:0"
           allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
           loading="lazy"
         ></iframe>
-      </div>
-    )}
-
-    {hasEpisodes && (
-      <div class="podcast__grid">
-        {podcast.episodes.map((ep) => (
-          <article class="podcast__card reveal">
-            {ep.title && <h3 class="podcast__card-title">{ep.title}</h3>}
-            <iframe
-              title={ep.title ?? 'Episodio'}
-              src={`https://open.spotify.com/embed/episode/${ep.id}?theme=0`}
-              width="100%"
-              height="152"
-              frameborder="0"
-              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              loading="lazy"
-            ></iframe>
-          </article>
-        ))}
-      </div>
-    )}
-
-    {!hasShow && !hasEpisodes && (
-      <div class="podcast__empty reveal">
-        <p>🎙️ Gli episodi appariranno qui.</p>
-        <p class="podcast__empty-hint">
-          Aggiungi lo <code>showId</code> o gli <code>episodes</code> in
-          <code>src/site.config.ts</code>.
+        <p class="podcast__hint">
+          Per la griglia automatica di tutti gli episodi, imposta le credenziali Spotify
+          (<code>SPOTIFY_CLIENT_ID</code> / <code>SPOTIFY_CLIENT_SECRET</code>).
         </p>
       </div>
     )}
   </div>
 </section>
 
+<script>
+  // Caricamento "on click": l'iframe Spotify viene creato solo quando
+  // l'utente vuole ascoltare -> griglia leggera anche con molti episodi.
+  document.querySelectorAll<HTMLElement>('.ep').forEach((card) => {
+    const btn = card.querySelector<HTMLButtonElement>('.ep__media');
+    const id = card.dataset.epId;
+    if (!btn || !id) return;
+    btn.addEventListener('click', () => {
+      const frame = document.createElement('iframe');
+      frame.src = `https://open.spotify.com/embed/episode/${id}?theme=0`;
+      frame.width = '100%';
+      frame.height = '152';
+      frame.style.border = '0';
+      frame.loading = 'lazy';
+      frame.title = card.querySelector('.ep__title')?.textContent ?? 'Episodio';
+      frame.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
+      const wrap = document.createElement('div');
+      wrap.className = 'ep__frame';
+      wrap.appendChild(frame);
+      btn.replaceWith(wrap);
+    }, { once: true });
+  });
+</script>
+
 <style>
   .podcast {
-    background:
-      radial-gradient(80% 60% at 100% 0%, rgba(0, 224, 198, 0.07), transparent 60%),
-      var(--bg-soft);
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--bg);
+    border-top: 1px solid rgba(63, 154, 166, 0.1);
   }
 
   .podcast__head {
     text-align: center;
     max-width: 60ch;
-    margin: 0 auto 3rem;
+    margin: 0 auto 3.5rem;
   }
   .podcast__title {
     font-family: var(--font-display);
-    font-size: clamp(2rem, 6vw, 3.5rem);
-    line-height: 1.05;
+    font-size: clamp(2.2rem, 7vw, 4rem);
+    line-height: 1.02;
     letter-spacing: -0.02em;
   }
   .podcast__subtitle {
@@ -96,62 +141,112 @@ const hasEpisodes = podcast.episodes.length > 0;
     padding: 0.75rem 1.4rem;
     border-radius: 999px;
     font-weight: 600;
-    color: #07080d;
+    color: #000;
     background: #1ed760;
     transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
   }
   .podcast__follow:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(30, 215, 96, 0.3);
+    box-shadow: 0 10px 30px rgba(30, 215, 96, 0.25);
   }
+
+  /* Griglia responsive (1 col mobile -> auto) */
+  .podcast__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+  @media (max-width: 560px) {
+    .podcast__grid { grid-template-columns: 1fr; }
+  }
+
+  .ep {
+    background: var(--surface);
+    border: 1px solid rgba(63, 154, 166, 0.12);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: transform 0.3s var(--ease), border-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  }
+  .ep:hover {
+    transform: translateY(-4px);
+    border-color: var(--teal-bright);
+    box-shadow: var(--glow);
+  }
+
+  .ep__media {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: var(--teal);
+    aspect-ratio: 1 / 1;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .ep__cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s var(--ease), filter 0.3s var(--ease);
+  }
+  .ep__cover--ph {
+    background: radial-gradient(circle at 30% 30%, var(--teal-glow), var(--teal) 70%);
+  }
+  .ep__media:hover .ep__cover { transform: scale(1.05); filter: brightness(1.05); }
+
+  .ep__play {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    color: #000;
+    background: rgba(63, 154, 166, 0.95);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s var(--ease);
+  }
+  .ep__media:hover .ep__play,
+  .ep__media:focus-visible .ep__play { transform: scale(1.12); }
+
+  .ep__body { padding: 1rem 1.1rem 1.2rem; }
+  .ep__title {
+    font-family: var(--font-display);
+    font-size: 1.02rem;
+    line-height: 1.3;
+    /* max 2 righe */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ep__meta { margin-top: 0.4rem; color: var(--text-dim); font-size: 0.85rem; }
+
+  .ep__frame { padding: 0.8rem; }
 
   .podcast__player {
     max-width: 760px;
     margin: 0 auto;
     border-radius: var(--radius);
     overflow: hidden;
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
   }
-
-  .podcast__grid {
-    margin-top: 3rem;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 1.5rem;
-  }
-  .podcast__card {
-    background: var(--surface);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: var(--radius);
-    padding: 1.25rem;
-    transition: transform 0.3s var(--ease), border-color 0.3s var(--ease);
-  }
-  .podcast__card:hover {
-    transform: translateY(-4px);
-    border-color: rgba(108, 92, 231, 0.4);
-  }
-  .podcast__card-title {
-    font-family: var(--font-display);
-    font-size: 1.05rem;
-    margin-bottom: 0.9rem;
-  }
-  .podcast__card iframe { border-radius: var(--radius-sm); }
-
-  .podcast__empty {
+  .podcast__hint {
+    margin-top: 1rem;
     text-align: center;
-    padding: 3rem 1rem;
-    color: var(--text-muted);
-    background: var(--surface);
-    border: 1px dashed rgba(255, 255, 255, 0.12);
-    border-radius: var(--radius);
-    max-width: 560px;
-    margin: 0 auto;
+    color: var(--text-dim);
+    font-size: 0.85rem;
   }
-  .podcast__empty-hint { font-size: 0.9rem; color: var(--text-dim); margin-top: 0.5rem; }
-  .podcast__empty code {
-    background: rgba(255, 255, 255, 0.07);
+  .podcast__hint code {
+    background: rgba(63, 154, 166, 0.1);
     padding: 0.15em 0.4em;
     border-radius: 6px;
-    font-size: 0.85em;
   }
 </style>

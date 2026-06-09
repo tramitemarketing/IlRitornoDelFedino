@@ -1,16 +1,35 @@
 ---
 import { siteConfig } from '../site.config';
-const { professor } = siteConfig;
+const { intro } = siteConfig;
+const hasVideo = intro.videoSrc.trim() !== '';
 ---
 
-<section class="intro" id="home">
+<section class="intro" id="home" data-has-video={hasVideo ? 'true' : 'false'}>
   <div class="intro__stage">
-    <canvas id="alley-canvas" aria-hidden="true"></canvas>
+    {hasVideo ? (
+      <video
+        id="intro-video"
+        class="intro__media intro__video"
+        muted
+        playsinline
+        preload="auto"
+        poster={intro.poster || undefined}
+        aria-hidden="true"
+      >
+        {intro.videoWebm && <source src={intro.videoWebm} type="video/webm" />}
+        <source src={intro.videoSrc} type="video/mp4" />
+      </video>
+    ) : (
+      <canvas id="alley-canvas" class="intro__media" aria-hidden="true"></canvas>
+    )}
 
-    <div class="intro__overlay" id="intro-overlay">
-      <p class="intro__brand">{siteConfig.siteName}</p>
-      <h1 class="intro__name gradient-text">{professor.name}</h1>
-      <p class="intro__tagline">{professor.tagline}</p>
+    <!-- Velo nero: schermata iniziale + dissolvenza finale -->
+    <div class="intro__black" id="intro-black"></div>
+
+    <!-- Titolo sullo schermo nero iniziale -->
+    <div class="intro__title" id="intro-title">
+      <h1 class="intro__name gradient-text">{intro.titleScreen}</h1>
+      {intro.titleSub && <p class="intro__sub">{intro.titleSub}</p>}
     </div>
 
     <div class="intro__hint" id="intro-hint" aria-hidden="true">
@@ -23,31 +42,38 @@ const { professor } = siteConfig;
 <style>
   .intro {
     position: relative;
-    /* Lunghezza dello scroll = durata della scena (sovrascritta su reduced-motion) */
-    height: var(--intro-scroll, 340vh);
-    background: var(--ink);
+    height: var(--intro-scroll, 360vh);
+    background: #000;
   }
-
   .intro__stage {
     position: sticky;
     top: 0;
     height: 100vh;
     height: 100svh;
     overflow: hidden;
+    background: #000;
   }
-
-  #alley-canvas {
+  .intro__media {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
+    object-fit: cover;
     display: block;
   }
 
-  .intro__overlay {
+  .intro__black {
     position: absolute;
     inset: 0;
     z-index: 2;
+    background: #000;
+    pointer-events: none;
+  }
+
+  .intro__title {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
     display: grid;
     place-content: center;
     text-align: center;
@@ -55,26 +81,21 @@ const { professor } = siteConfig;
     pointer-events: none;
     will-change: opacity, transform;
   }
-  .intro__brand {
-    font-family: var(--font-display);
-    letter-spacing: 0.4em;
-    text-transform: uppercase;
-    font-size: clamp(0.65rem, 2vw, 0.8rem);
-    color: var(--text-muted);
-    margin-bottom: 1.2rem;
-  }
   .intro__name {
     font-family: var(--font-display);
     font-weight: 700;
     line-height: 0.95;
     letter-spacing: -0.02em;
-    font-size: clamp(3rem, 12vw, 8.5rem);
-    filter: drop-shadow(0 0 40px rgba(115, 129, 157, 0.25));
+    font-size: clamp(2.6rem, 11vw, 8rem);
+    filter: drop-shadow(0 0 50px rgba(29, 107, 118, 0.35));
   }
-  .intro__tagline {
-    margin-top: 1.2rem;
+  .intro__sub {
+    margin-top: 1rem;
     color: var(--text-muted);
-    font-size: clamp(1rem, 2.6vw, 1.3rem);
+    font-family: var(--font-display);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    font-size: clamp(0.7rem, 2vw, 0.9rem);
   }
 
   .intro__hint {
@@ -82,7 +103,7 @@ const { professor } = siteConfig;
     bottom: 2rem;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 2;
+    z-index: 3;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -97,7 +118,7 @@ const { professor } = siteConfig;
   .intro__hint-line {
     width: 1px;
     height: 42px;
-    background: linear-gradient(var(--slate), transparent);
+    background: linear-gradient(var(--teal-bright), transparent);
     animation: hintpulse 1.8s var(--ease) infinite;
     transform-origin: top;
   }
@@ -107,7 +128,6 @@ const { professor } = siteConfig;
     100% { transform: scaleY(1) translateY(20px); opacity: 0; }
   }
 
-  /* Fallback statico per chi preferisce meno movimento */
   @media (prefers-reduced-motion: reduce) {
     .intro { height: 100svh; }
     .intro__hint { display: none; }
@@ -116,342 +136,263 @@ const { professor } = siteConfig;
 
 <script>
   // ===========================================================
-  // HOME — Scena noir "auto nel vicolo cieco", guidata dallo
-  // scroll (reversibile). Canvas 2D, vettoriale stilizzato.
-  // Tutto è funzione pura di (progress, time) => reversibile.
+  // HOME — Intro: schermo nero col titolo -> scena (video
+  // scrubbato dallo scroll, oppure canvas vettoriale) -> nero.
+  // Tutto è funzione pura di (progress) => reversibile.
   // ===========================================================
   const section = document.querySelector<HTMLElement>('.intro');
-  const canvas = document.getElementById('alley-canvas') as HTMLCanvasElement | null;
-  const overlay = document.getElementById('intro-overlay');
-  const hint = document.getElementById('intro-hint');
+  const blackEl = document.getElementById('intro-black');
+  const titleEl = document.getElementById('intro-title');
+  const hintEl = document.getElementById('intro-hint');
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  if (section && canvas) {
-    const ctx = canvas.getContext('2d')!;
-    let w = 0, h = 0, dpr = 1;
-    let progress = 0;
+  const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+  const smooth = (e0: number, e1: number, x: number) => {
+    const t = clamp((x - e0) / (e1 - e0));
+    return t * t * (3 - 2 * t);
+  };
+  const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
-    const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
-    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-    const smooth = (e0: number, e1: number, x: number) => {
-      const t = clamp((x - e0) / (e1 - e0));
-      return t * t * (3 - 2 * t);
-    };
-    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+  // Finestra temporale della "scena" dentro lo scroll totale
+  const SCENE_IN = 0.12, SCENE_OUT = 0.85;
 
-    function resize() {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      w = canvas!.clientWidth;
-      h = canvas!.clientHeight;
-      canvas!.width = Math.floor(w * dpr);
-      canvas!.height = Math.floor(h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
+  if (section) {
+    const video = document.getElementById('intro-video') as HTMLVideoElement | null;
+    const canvas = document.getElementById('alley-canvas') as HTMLCanvasElement | null;
 
-    // ---- Finestre dei palazzi (profondità prospettica) ----
-    function drawWindows(VPx: number, VPy: number) {
-      const depths = [0.16, 0.3, 0.44, 0.57, 0.68];
-      const nearL = w * 0.04, nearR = w * 0.96;
-      const farL = VPx - w * 0.045, farR = VPx + w * 0.045;
-      depths.forEach((t, row) => {
-        const y = lerp(h * 1.0, VPy + h * 0.02, t);
-        const size = lerp(26, 4, t);
-        const xL = lerp(nearL, farL, t);
-        const xR = lerp(nearR, farR, t);
-        for (let c = 0; c < 3; c++) {
-          const lit = ((row * 7 + c * 13) % 5) < 2; // pattern deterministico
-          const a = lit ? lerp(0.22, 0.05, t) : lerp(0.05, 0.01, t);
-          const wy = y - size * (2.2 + c * 1.6);
-          // muro sinistro
-          ctx.fillStyle = `rgba(115,129,157,${a})`;
-          ctx.fillRect(xL + size * 0.4, wy, size * 0.7, size * 1.1);
-          // muro destro
-          ctx.fillRect(xR - size * 1.1, wy, size * 0.7, size * 1.1);
-        }
-      });
-    }
-
-    // ---- Auto in vista laterale (procede verso sinistra) ----
-    function drawCar(cx: number, cy: number, s: number, wheelAng: number, light: number, brake: number) {
-      const L = w * 0.22 * s;        // lunghezza
-      const H = L * 0.30;            // altezza corpo
-      const wr = H * 0.42;           // raggio ruote
-      ctx.save();
-      ctx.translate(cx, cy);
-
-      // ombra a terra
-      const sh = ctx.createRadialGradient(0, H * 0.95, 0, 0, H * 0.95, L * 0.62);
-      sh.addColorStop(0, 'rgba(0,0,0,0.55)');
-      sh.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = sh;
-      ctx.beginPath();
-      ctx.ellipse(0, H * 0.98, L * 0.62, H * 0.28, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // corpo
-      ctx.fillStyle = '#070b16';
-      ctx.strokeStyle = 'rgba(115,129,157,0.35)';
-      ctx.lineWidth = 1;
-      roundRect(-L / 2, -H * 0.2, L, H, H * 0.42);
-      ctx.fill();
-      // cabina
-      ctx.beginPath();
-      ctx.moveTo(-L * 0.26, -H * 0.2);
-      ctx.lineTo(-L * 0.14, -H * 0.78);
-      ctx.lineTo(L * 0.16, -H * 0.78);
-      ctx.lineTo(L * 0.30, -H * 0.2);
-      ctx.closePath();
-      ctx.fill();
-      // vetri (riflesso notte)
-      ctx.fillStyle = 'rgba(115,129,157,0.18)';
-      ctx.beginPath();
-      ctx.moveTo(-L * 0.20, -H * 0.24);
-      ctx.lineTo(-L * 0.10, -H * 0.70);
-      ctx.lineTo(L * 0.12, -H * 0.70);
-      ctx.lineTo(L * 0.24, -H * 0.24);
-      ctx.closePath();
-      ctx.fill();
-      // bordo lucido lungo il tetto
-      ctx.strokeStyle = 'rgba(159,176,207,0.25)';
-      roundRect(-L / 2, -H * 0.2, L, H, H * 0.42);
-      ctx.stroke();
-
-      // ruote
-      drawWheel(-L * 0.30, H * 0.78, wr, wheelAng);
-      drawWheel(L * 0.30, H * 0.78, wr, wheelAng);
-
-      // fanale anteriore (sinistra) + alone
-      const hx = -L * 0.5, hy = H * 0.18;
-      if (light > 0.01) {
-        ctx.fillStyle = `rgba(220,232,255,${0.9 * light})`;
-        ctx.beginPath();
-        ctx.arc(hx, hy, H * 0.12, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      // luce di stop (destra)
-      ctx.fillStyle = `rgba(255,60,60,${0.35 + brake * 0.6})`;
-      ctx.beginPath();
-      ctx.arc(L * 0.5, hy, H * 0.1, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
-
-      // ---- fascio dei fari sull'asfalto/curva (in coord. globali) ----
-      if (light > 0.01) {
-        const bx = cx + hx, by = cy + hy;
-        const beam = ctx.createLinearGradient(bx, by, bx - L * 1.6, by + H * 1.2);
-        beam.addColorStop(0, `rgba(200,218,255,${0.30 * light})`);
-        beam.addColorStop(1, 'rgba(200,218,255,0)');
-        ctx.fillStyle = beam;
-        ctx.beginPath();
-        ctx.moveTo(bx, by - H * 0.1);
-        ctx.lineTo(bx - L * 1.7, by + H * 1.5);
-        ctx.lineTo(bx - L * 1.7, by + H * 3.2);
-        ctx.lineTo(bx, by + H * 0.5);
-        ctx.closePath();
-        ctx.fill();
-      }
-    }
-
-    function drawWheel(x: number, y: number, r: number, ang: number) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.fillStyle = '#04060d';
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.rotate(ang);
-      ctx.strokeStyle = 'rgba(115,129,157,0.5)';
-      ctx.lineWidth = Math.max(1, r * 0.12);
-      for (let i = 0; i < 4; i++) {
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(0, -r * 0.7);
-        ctx.stroke();
-        ctx.rotate(Math.PI / 2);
-      }
-      ctx.restore();
-    }
-
-    function roundRect(x: number, y: number, ww: number, hh: number, r: number) {
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.arcTo(x + ww, y, x + ww, y + hh, r);
-      ctx.arcTo(x + ww, y + hh, x, y + hh, r);
-      ctx.arcTo(x, y + hh, x, y, r);
-      ctx.arcTo(x, y, x + ww, y, r);
-      ctx.closePath();
-    }
-
-    // ---- Scena completa ----
-    function draw(p: number, time: number) {
-      ctx.clearRect(0, 0, w, h);
-      const VPx = w * 0.5, VPy = h * 0.42;
-      const groundY = h * 0.99;
-
-      // 1. cielo/muri notturni
-      const sky = ctx.createLinearGradient(0, 0, 0, h);
-      sky.addColorStop(0, '#030612');
-      sky.addColorStop(0.55, '#030a1a');
-      sky.addColorStop(1, '#02020a');
-      ctx.fillStyle = sky;
-      ctx.fillRect(0, 0, w, h);
-
-      // 2. muro di fondo (vicolo cieco) + alone fioco
-      const bwW = w * 0.13, bwH = h * 0.16;
-      ctx.fillStyle = '#05204a';
-      ctx.fillRect(VPx - bwW / 2, VPy - bwH * 0.7, bwW, bwH);
-      const flick = 0.85 + Math.sin(time * 0.004) * 0.06 + Math.sin(time * 0.017) * 0.03;
-      const halo = ctx.createRadialGradient(VPx, VPy - bwH * 0.2, 0, VPx, VPy - bwH * 0.2, w * 0.18);
-      halo.addColorStop(0, `rgba(115,129,157,${0.18 * flick})`);
-      halo.addColorStop(1, 'rgba(115,129,157,0)');
-      ctx.fillStyle = halo;
-      ctx.fillRect(0, 0, w, h);
-
-      // 3. finestre dei palazzi
-      drawWindows(VPx, VPy);
-
-      // 4. strada (trapezio prospettico, asfalto bagnato)
-      const nearL = w * 0.06, nearR = w * 0.94;
-      const farL = VPx - w * 0.05, farR = VPx + w * 0.05;
-      const farY = VPy + h * 0.02;
-      const road = ctx.createLinearGradient(0, farY, 0, groundY);
-      road.addColorStop(0, '#04122c');
-      road.addColorStop(1, '#02050f');
-      ctx.fillStyle = road;
-      ctx.beginPath();
-      ctx.moveTo(nearL, groundY);
-      ctx.lineTo(nearR, groundY);
-      ctx.lineTo(farR, farY);
-      ctx.lineTo(farL, farY);
-      ctx.closePath();
-      ctx.fill();
-
-      // riflesso bagnato centrale
-      const wet = ctx.createLinearGradient(VPx, farY, VPx, groundY);
-      wet.addColorStop(0, `rgba(115,129,157,${0.10 * flick})`);
-      wet.addColorStop(1, 'rgba(115,129,157,0)');
-      ctx.fillStyle = wet;
-      ctx.beginPath();
-      ctx.moveTo(VPx - w * 0.015, farY);
-      ctx.lineTo(VPx + w * 0.015, farY);
-      ctx.lineTo(VPx + w * 0.10, groundY);
-      ctx.lineTo(VPx - w * 0.10, groundY);
-      ctx.closePath();
-      ctx.fill();
-
-      // 5. linee prospettiche dei bordi strada
-      ctx.strokeStyle = 'rgba(115,129,157,0.10)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(nearL, groundY); ctx.lineTo(farL, farY);
-      ctx.moveTo(nearR, groundY); ctx.lineTo(farR, farY);
-      ctx.stroke();
-
-      // 6. marciapiede (dove l'auto si accosta)
-      const curbY = h * 0.70;
-      ctx.fillStyle = 'rgba(8,14,28,0.9)';
-      ctx.fillRect(w * 0.08, curbY, w * 0.5, h * 0.03);
-      ctx.fillStyle = 'rgba(115,129,157,0.12)';
-      ctx.fillRect(w * 0.08, curbY, w * 0.5, 2);
-
-      // 7. lampione + pozza di luce
-      const lampX = w * 0.2, lampTop = h * 0.18, lampBase = curbY;
-      ctx.strokeStyle = 'rgba(115,129,157,0.3)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(lampX, lampBase);
-      ctx.lineTo(lampX, lampTop);
-      ctx.lineTo(lampX + w * 0.05, lampTop);
-      ctx.stroke();
-      const lampGlow = ctx.createRadialGradient(lampX + w * 0.05, lampTop, 0, lampX + w * 0.05, lampTop, w * 0.04);
-      lampGlow.addColorStop(0, `rgba(200,214,240,${0.5 * flick})`);
-      lampGlow.addColorStop(1, 'rgba(200,214,240,0)');
-      ctx.fillStyle = lampGlow;
-      ctx.fillRect(0, 0, w, h);
-      // pozza a terra
-      const pool = ctx.createRadialGradient(lampX + w * 0.05, h * 0.84, 0, lampX + w * 0.05, h * 0.84, w * 0.16);
-      pool.addColorStop(0, `rgba(115,129,157,${0.10 * flick})`);
-      pool.addColorStop(1, 'rgba(115,129,157,0)');
-      ctx.fillStyle = pool;
-      ctx.beginPath();
-      ctx.ellipse(lampX + w * 0.05, h * 0.84, w * 0.16, h * 0.05, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 8. AUTO — entra da destra e si accosta al marciapiede
-      const drive = easeOutCubic(clamp(p / 0.62));
-      const xStart = w * 1.25, xStop = w * 0.4;
-      const carX = lerp(xStart, xStop, drive);
-      const carY = h * 0.82;
-      const scale = lerp(1.05, 0.92, drive);
-      const dist = (xStart - carX) / (h * 0.05);      // rotazione ruote ~ distanza
-      const light = 1 - smooth(0.66, 0.9, p);          // fari si spengono
-      const brake = smooth(0.45, 0.62, p) * (1 - smooth(0.7, 0.85, p));
-      drawCar(carX, carY, scale, -dist, light, brake);
-
-      // 9. nebbia che deriva
-      const fog = ctx.createLinearGradient(0, VPy, 0, h * 0.75);
-      const fa = 0.05 + Math.sin(time * 0.0008) * 0.02;
-      fog.addColorStop(0, `rgba(115,129,157,${Math.max(0, fa)})`);
-      fog.addColorStop(1, 'rgba(115,129,157,0)');
-      ctx.fillStyle = fog;
-      ctx.fillRect(0, VPy, w, h * 0.4);
-
-      // 10. vignettatura
-      const vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.25, w / 2, h / 2, h * 0.85);
-      vig.addColorStop(0, 'rgba(0,0,0,0)');
-      vig.addColorStop(1, 'rgba(0,0,0,0.7)');
-      ctx.fillStyle = vig;
-      ctx.fillRect(0, 0, w, h);
-
-      // 11. dissolvenza al nero -> apertura pagina
-      const blackK = smooth(0.78, 1.0, p);
-      if (blackK > 0) {
-        ctx.fillStyle = `rgba(2,2,10,${blackK})`;
-        ctx.fillRect(0, 0, w, h);
-      }
-    }
-
-    function updateOverlay(p: number) {
-      const textK = 1 - smooth(0.04, 0.28, p);
-      if (overlay) {
-        overlay.style.opacity = String(textK);
-        overlay.style.transform = `translateY(${(-20 * (1 - textK)).toFixed(1)}px)`;
-      }
-      if (hint) hint.style.opacity = String(1 - smooth(0, 0.06, p));
-    }
-
-    function computeProgress() {
+    function progressNow() {
       const total = section!.offsetHeight - window.innerHeight;
       if (total <= 0) return 0;
-      const top = section!.getBoundingClientRect().top;
-      return clamp(-top / total);
+      return clamp(-section!.getBoundingClientRect().top / total);
     }
 
-    // ---- Loop ----
-    let raf = 0;
-    function loop() {
-      const time = performance.now();
-      progress = computeProgress();
-      draw(progress, time);
-      updateOverlay(progress);
-      raf = requestAnimationFrame(loop);
+    function updateOverlays(p: number) {
+      const startBlack = 1 - smooth(0, SCENE_IN - 0.01, p);
+      const endBlack = smooth(SCENE_OUT, 1, p);
+      if (blackEl) blackEl.style.opacity = String(Math.max(startBlack, endBlack));
+      const titleK = 1 - smooth(0.03, SCENE_IN, p);
+      if (titleEl) {
+        titleEl.style.opacity = String(titleK);
+        titleEl.style.transform = `translateY(${(-16 * (1 - titleK)).toFixed(1)}px)`;
+      }
+      if (hintEl) hintEl.style.opacity = String(1 - smooth(0, 0.06, p));
     }
 
-    window.addEventListener('resize', resize);
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) cancelAnimationFrame(raf);
-      else if (!reduce) loop();
-    });
+    const sceneProgress = (p: number) => smooth(SCENE_IN, SCENE_OUT, p);
 
-    resize();
+    // ---------------- MODalità VIDEO ----------------
+    function setupVideo(v: HTMLVideoElement) {
+      let duration = 0;
+      v.pause();
+      v.addEventListener('loadedmetadata', () => (duration = v.duration || 0));
 
-    if (reduce) {
-      // Fallback statico: un fotogramma elegante (auto già accostata)
-      draw(0.62, 0);
-      updateOverlay(0);
-    } else {
-      loop();
+      function frame() {
+        const p = progressNow();
+        updateOverlays(p);
+        if (duration > 0) {
+          const target = clamp(sceneProgress(p)) * duration;
+          if (Math.abs((v.currentTime || 0) - target) > 0.03) {
+            try { v.currentTime = target; } catch {}
+          }
+        }
+        raf = requestAnimationFrame(frame);
+      }
+      let raf = requestAnimationFrame(frame);
     }
+
+    // ---------------- MODalità CANVAS (fallback) ----------------
+    function setupCanvas(cv: HTMLCanvasElement) {
+      const ctx = cv.getContext('2d')!;
+      let w = 0, h = 0, dpr = 1;
+
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        w = cv.clientWidth; h = cv.clientHeight;
+        cv.width = Math.floor(w * dpr); cv.height = Math.floor(h * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function roundRect(x: number, y: number, ww: number, hh: number, r: number) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + ww, y, x + ww, y + hh, r);
+        ctx.arcTo(x + ww, y + hh, x, y + hh, r);
+        ctx.arcTo(x, y + hh, x, y, r);
+        ctx.arcTo(x, y, x + ww, y, r);
+        ctx.closePath();
+      }
+
+      function drawWheel(x: number, y: number, r: number, ang: number) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.fillStyle = '#020405';
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+        ctx.rotate(ang);
+        ctx.strokeStyle = 'rgba(63,154,166,0.5)';
+        ctx.lineWidth = Math.max(1, r * 0.12);
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -r * 0.7); ctx.stroke();
+          ctx.rotate(Math.PI / 2);
+        }
+        ctx.restore();
+      }
+
+      function drawCar(cx: number, cy: number, s: number, ang: number, light: number, brake: number) {
+        const L = w * 0.22 * s, H = L * 0.30, wr = H * 0.42;
+        ctx.save(); ctx.translate(cx, cy);
+        const sh = ctx.createRadialGradient(0, H * 0.95, 0, 0, H * 0.95, L * 0.62);
+        sh.addColorStop(0, 'rgba(0,0,0,0.6)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = sh;
+        ctx.beginPath(); ctx.ellipse(0, H * 0.98, L * 0.62, H * 0.28, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#04090b';
+        roundRect(-L / 2, -H * 0.2, L, H, H * 0.42); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-L * 0.26, -H * 0.2); ctx.lineTo(-L * 0.14, -H * 0.78);
+        ctx.lineTo(L * 0.16, -H * 0.78); ctx.lineTo(L * 0.30, -H * 0.2);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(63,154,166,0.16)';
+        ctx.beginPath();
+        ctx.moveTo(-L * 0.20, -H * 0.24); ctx.lineTo(-L * 0.10, -H * 0.70);
+        ctx.lineTo(L * 0.12, -H * 0.70); ctx.lineTo(L * 0.24, -H * 0.24);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(95,185,196,0.25)'; ctx.lineWidth = 1;
+        roundRect(-L / 2, -H * 0.2, L, H, H * 0.42); ctx.stroke();
+        drawWheel(-L * 0.30, H * 0.78, wr, ang);
+        drawWheel(L * 0.30, H * 0.78, wr, ang);
+        const hx = -L * 0.5, hy = H * 0.18;
+        if (light > 0.01) {
+          ctx.fillStyle = `rgba(190,236,240,${0.9 * light})`;
+          ctx.beginPath(); ctx.arc(hx, hy, H * 0.12, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = `rgba(255,70,70,${0.3 + brake * 0.6})`;
+        ctx.beginPath(); ctx.arc(L * 0.5, hy, H * 0.1, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        if (light > 0.01) {
+          const bx = cx + hx, by = cy + hy;
+          const beam = ctx.createLinearGradient(bx, by, bx - L * 1.6, by + H * 1.2);
+          beam.addColorStop(0, `rgba(170,230,235,${0.28 * light})`);
+          beam.addColorStop(1, 'rgba(170,230,235,0)');
+          ctx.fillStyle = beam;
+          ctx.beginPath();
+          ctx.moveTo(bx, by - H * 0.1); ctx.lineTo(bx - L * 1.7, by + H * 1.5);
+          ctx.lineTo(bx - L * 1.7, by + H * 3.2); ctx.lineTo(bx, by + H * 0.5);
+          ctx.closePath(); ctx.fill();
+        }
+      }
+
+      function drawWindows(VPx: number, VPy: number) {
+        const depths = [0.16, 0.3, 0.44, 0.57, 0.68];
+        const nearL = w * 0.04, nearR = w * 0.96;
+        const farL = VPx - w * 0.045, farR = VPx + w * 0.045;
+        depths.forEach((t, row) => {
+          const y = lerp(h, VPy + h * 0.02, t);
+          const size = lerp(26, 4, t);
+          const xL = lerp(nearL, farL, t), xR = lerp(nearR, farR, t);
+          for (let c = 0; c < 3; c++) {
+            const lit = ((row * 7 + c * 13) % 5) < 2;
+            const a = lit ? lerp(0.18, 0.04, t) : lerp(0.04, 0.01, t);
+            const wy = y - size * (2.2 + c * 1.6);
+            ctx.fillStyle = `rgba(63,154,166,${a})`;
+            ctx.fillRect(xL + size * 0.4, wy, size * 0.7, size * 1.1);
+            ctx.fillRect(xR - size * 1.1, wy, size * 0.7, size * 1.1);
+          }
+        });
+      }
+
+      function draw(sp: number, time: number) {
+        ctx.clearRect(0, 0, w, h);
+        const VPx = w * 0.5, VPy = h * 0.42, groundY = h * 0.99;
+        const flick = 0.85 + Math.sin(time * 0.004) * 0.06 + Math.sin(time * 0.017) * 0.03;
+
+        const sky = ctx.createLinearGradient(0, 0, 0, h);
+        sky.addColorStop(0, '#02080a'); sky.addColorStop(0.6, '#010405'); sky.addColorStop(1, '#000');
+        ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+
+        const bwW = w * 0.13, bwH = h * 0.16;
+        ctx.fillStyle = '#04282e';
+        ctx.fillRect(VPx - bwW / 2, VPy - bwH * 0.7, bwW, bwH);
+        const halo = ctx.createRadialGradient(VPx, VPy - bwH * 0.2, 0, VPx, VPy - bwH * 0.2, w * 0.18);
+        halo.addColorStop(0, `rgba(63,154,166,${0.16 * flick})`); halo.addColorStop(1, 'rgba(63,154,166,0)');
+        ctx.fillStyle = halo; ctx.fillRect(0, 0, w, h);
+
+        drawWindows(VPx, VPy);
+
+        const nearL = w * 0.06, nearR = w * 0.94;
+        const farL = VPx - w * 0.05, farR = VPx + w * 0.05, farY = VPy + h * 0.02;
+        const road = ctx.createLinearGradient(0, farY, 0, groundY);
+        road.addColorStop(0, '#031a1e'); road.addColorStop(1, '#000');
+        ctx.fillStyle = road;
+        ctx.beginPath();
+        ctx.moveTo(nearL, groundY); ctx.lineTo(nearR, groundY);
+        ctx.lineTo(farR, farY); ctx.lineTo(farL, farY); ctx.closePath(); ctx.fill();
+
+        const wet = ctx.createLinearGradient(VPx, farY, VPx, groundY);
+        wet.addColorStop(0, `rgba(63,154,166,${0.1 * flick})`); wet.addColorStop(1, 'rgba(63,154,166,0)');
+        ctx.fillStyle = wet;
+        ctx.beginPath();
+        ctx.moveTo(VPx - w * 0.015, farY); ctx.lineTo(VPx + w * 0.015, farY);
+        ctx.lineTo(VPx + w * 0.1, groundY); ctx.lineTo(VPx - w * 0.1, groundY); ctx.closePath(); ctx.fill();
+
+        ctx.strokeStyle = 'rgba(63,154,166,0.1)'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(nearL, groundY); ctx.lineTo(farL, farY);
+        ctx.moveTo(nearR, groundY); ctx.lineTo(farR, farY); ctx.stroke();
+
+        const curbY = h * 0.7;
+        ctx.fillStyle = 'rgba(2,8,9,0.9)'; ctx.fillRect(w * 0.08, curbY, w * 0.5, h * 0.03);
+        ctx.fillStyle = 'rgba(63,154,166,0.12)'; ctx.fillRect(w * 0.08, curbY, w * 0.5, 2);
+
+        const lampX = w * 0.2, lampTop = h * 0.18;
+        ctx.strokeStyle = 'rgba(63,154,166,0.3)'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(lampX, curbY); ctx.lineTo(lampX, lampTop); ctx.lineTo(lampX + w * 0.05, lampTop); ctx.stroke();
+        const lg = ctx.createRadialGradient(lampX + w * 0.05, lampTop, 0, lampX + w * 0.05, lampTop, w * 0.04);
+        lg.addColorStop(0, `rgba(150,230,235,${0.5 * flick})`); lg.addColorStop(1, 'rgba(150,230,235,0)');
+        ctx.fillStyle = lg; ctx.fillRect(0, 0, w, h);
+        const pool = ctx.createRadialGradient(lampX + w * 0.05, h * 0.84, 0, lampX + w * 0.05, h * 0.84, w * 0.16);
+        pool.addColorStop(0, `rgba(63,154,166,${0.1 * flick})`); pool.addColorStop(1, 'rgba(63,154,166,0)');
+        ctx.fillStyle = pool;
+        ctx.beginPath(); ctx.ellipse(lampX + w * 0.05, h * 0.84, w * 0.16, h * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+
+        const drive = easeOutCubic(clamp(sp / 0.82));
+        const xStart = w * 1.25, xStop = w * 0.4;
+        const carX = lerp(xStart, xStop, drive);
+        const dist = (xStart - carX) / (h * 0.05);
+        const light = 1 - smooth(0.8, 1, sp);
+        const brake = smooth(0.55, 0.82, sp) * (1 - smooth(0.9, 1, sp));
+        drawCar(carX, h * 0.82, lerp(1.05, 0.92, drive), -dist, light, brake);
+
+        const fog = ctx.createLinearGradient(0, VPy, 0, h * 0.75);
+        const fa = 0.05 + Math.sin(time * 0.0008) * 0.02;
+        fog.addColorStop(0, `rgba(63,154,166,${Math.max(0, fa)})`); fog.addColorStop(1, 'rgba(63,154,166,0)');
+        ctx.fillStyle = fog; ctx.fillRect(0, VPy, w, h * 0.4);
+
+        const vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.25, w / 2, h / 2, h * 0.85);
+        vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.75)');
+        ctx.fillStyle = vig; ctx.fillRect(0, 0, w, h);
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
+
+      let raf = 0;
+      function loop() {
+        const p = progressNow();
+        draw(sceneProgress(p), performance.now());
+        updateOverlays(p);
+        raf = requestAnimationFrame(loop);
+      }
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) cancelAnimationFrame(raf);
+        else if (!reduce) loop();
+      });
+
+      if (reduce) { draw(0.62, 0); updateOverlays(0); }
+      else loop();
+    }
+
+    if (video) setupVideo(video);
+    else if (canvas) setupCanvas(canvas);
   }
 </script>
