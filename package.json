@@ -1,0 +1,16 @@
+{
+  "name": "il-ritorno-del-fedino",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Sito personale del professore con sezione podcast embeddata da Spotify.",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^5.2.0"
+  }
+}
