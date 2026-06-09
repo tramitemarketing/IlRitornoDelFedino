@@ -32,21 +32,10 @@ export const siteConfig = {
 
   /** Intro animata (schermata nera col titolo -> video -> nero) */
   intro: {
-    /** Titolo mostrato sullo schermo nero iniziale */
-    titleScreen: 'Il Ritorno del Fedino',
-    /** Sottotitolo opzionale sotto il titolo iniziale */
-    titleSub: 'di Iacopo Fedi',
-    /**
-     * Video dell'intro (scrubbato dallo scroll, reversibile).
-     * Metti i file in /public e indica qui i percorsi.
-     * Se vuoto, parte la scena vettoriale di fallback (canvas).
-     * Consiglio: fornisci sia MP4 (H.264) sia WebM (VP9/AV1).
-     */
-    videoSrc: '',          // es: '/intro.mp4'
-    videoWebm: '',         // es: '/intro.webm'
-    /** Immagine poster (ultimo frame nero), opzionale */
-    poster: '',
-  },
+     videoSrc: '/intro.mp4',
+     videoWebm: '/intro.webm',
+     poster: '/poster.jpg',
+   },
 
   /** Sezione podcast */
   podcast: {
