@@ -55,7 +55,7 @@ function getCreds() {
 }
 
 type TokenResult =
-  | { token: string }
+  | { token: string; userToken: boolean }
   | { error: 'no-creds' | 'token-error' | 'network-error'; detail?: string };
 
 async function getToken(): Promise<TokenResult> {
@@ -98,7 +98,7 @@ async function getToken(): Promise<TokenResult> {
     }
     const data = await res.json();
     if (!data.access_token) return { error: 'token-error', detail: 'no access_token' };
-    return { token: data.access_token };
+    return { token: data.access_token, userToken: !!refresh };
   } catch (e) {
     console.warn('[spotify] Errore di rete nel recupero del token:', e);
     return { error: 'network-error', detail: String(e) };
@@ -119,6 +119,7 @@ export async function getShowEpisodes(
   const tok = await getToken();
   if ('error' in tok) return { episodes: [], status: tok.error, detail: tok.detail };
   const token = tok.token;
+  const tag = tok.userToken ? 'refresh:usato' : 'refresh:assente';
 
   const lim = Math.min(50, limit);
   // Proviamo prima CON market, poi SENZA (alcuni token/show falliscono col market).
@@ -173,7 +174,7 @@ export async function getShowEpisodes(
   return {
     episodes: [],
     status: lastDetail.startsWith('HTTP') ? 'api-error' : 'empty',
-    detail: lastDetail,
+    detail: `${lastDetail} · ${tag}`,
   };
 }
 
