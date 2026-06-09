@@ -24,6 +24,21 @@ export interface Episode {
   url: string;
 }
 
+/** Esito del recupero, usato anche per mostrare un messaggio chiaro in pagina. */
+export type FetchStatus =
+  | 'ok'
+  | 'no-creds'
+  | 'token-error'
+  | 'api-error'
+  | 'empty'
+  | 'network-error';
+
+export interface EpisodesResult {
+  episodes: Episode[];
+  status: FetchStatus;
+  detail?: string;
+}
+
 const TOKEN_URL = 'https://accounts.spotify.com/api/token';
 const API = 'https://api.spotify.com/v1';
 
@@ -39,7 +54,11 @@ function getCreds() {
   return id && secret ? { id, secret } : null;
 }
 
-async function getToken(): Promise<string | null> {
+type TokenResult =
+  | { token: string }
+  | { error: 'no-creds' | 'token-error' | 'network-error'; detail?: string };
+
+async function getToken(): Promise<TokenResult> {
   const creds = getCreds();
   if (!creds) {
     console.warn(
@@ -47,7 +66,7 @@ async function getToken(): Promise<string | null> {
         'Su Vercel/Netlify aggiungile alle Environment Variables (ambiente Production) ' +
         'e fai un nuovo deploy.',
     );
-    return null;
+    return { error: 'no-creds' };
   }
   try {
     const basic = Buffer.from(`${creds.id}:${creds.secret}`).toString('base64');
@@ -60,32 +79,32 @@ async function getToken(): Promise<string | null> {
       body: 'grant_type=client_credentials',
     });
     if (!res.ok) {
-      console.warn(
-        `[spotify] Token non ottenuto (HTTP ${res.status}). ` +
-          'Controlla che Client ID/Secret siano corretti.',
-      );
-      return null;
+      console.warn(`[spotify] Token non ottenuto (HTTP ${res.status}).`);
+      return { error: 'token-error', detail: `HTTP ${res.status}` };
     }
     const data = await res.json();
-    return data.access_token ?? null;
+    if (!data.access_token) return { error: 'token-error', detail: 'no access_token' };
+    return { token: data.access_token };
   } catch (e) {
     console.warn('[spotify] Errore di rete nel recupero del token:', e);
-    return null;
+    return { error: 'network-error', detail: String(e) };
   }
 }
 
 /**
- * Recupera fino a `limit` episodi dello show indicato.
- * Gestisce la paginazione dell'API (50 per pagina).
+ * Recupera fino a `limit` episodi dello show indicato (con paginazione).
+ * Restituisce sempre uno stato, così la UI può spiegare un eventuale problema.
  */
 export async function getShowEpisodes(
   showId: string,
   market = 'IT',
   limit = 50,
-): Promise<Episode[]> {
-  if (!showId) return [];
-  const token = await getToken();
-  if (!token) return [];
+): Promise<EpisodesResult> {
+  if (!showId) return { episodes: [], status: 'api-error', detail: 'showId mancante' };
+
+  const tok = await getToken();
+  if ('error' in tok) return { episodes: [], status: tok.error, detail: tok.detail };
+  const token = tok.token;
 
   const out: Episode[] = [];
   try {
@@ -97,10 +116,9 @@ export async function getShowEpisodes(
       });
       if (!res.ok) {
         console.warn(
-          `[spotify] Errore nel recupero episodi (HTTP ${res.status}) per show ${showId}, ` +
-            `market ${market}. Verifica showId e market.`,
+          `[spotify] Errore recupero episodi (HTTP ${res.status}) show ${showId}, market ${market}.`,
         );
-        break;
+        return { episodes: out, status: 'api-error', detail: `HTTP ${res.status}` };
       }
       const data = await res.json();
       for (const it of data.items ?? []) {
@@ -119,10 +137,14 @@ export async function getShowEpisodes(
     }
   } catch (e) {
     console.warn('[spotify] Errore di rete nel recupero episodi:', e);
-    return out;
+    return { episodes: out, status: 'network-error', detail: String(e) };
   }
+
   console.log(`[spotify] Episodi recuperati: ${out.length} (show ${showId}).`);
-  return out.slice(0, limit);
+  return {
+    episodes: out.slice(0, limit),
+    status: out.length > 0 ? 'ok' : 'empty',
+  };
 }
 
 /** Formatta una durata in ms come "12 min" o "1 h 03 min". */

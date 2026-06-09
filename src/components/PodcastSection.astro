@@ -1,14 +1,36 @@
 ---
 import { siteConfig } from '../site.config';
-import { getShowEpisodes, formatDuration, formatDate, type Episode } from '../lib/spotify';
+import {
+  getShowEpisodes,
+  formatDuration,
+  formatDate,
+  type Episode,
+  type FetchStatus,
+} from '../lib/spotify';
 
 const { podcast } = siteConfig;
 
 // 1) prova il recupero automatico via API (se autoFetch e credenziali)
 let episodes: Episode[] = [];
+let status: FetchStatus = 'empty';
 if (podcast.autoFetch) {
-  episodes = await getShowEpisodes(podcast.showId, podcast.market, podcast.maxEpisodes);
+  const res = await getShowEpisodes(podcast.showId, podcast.market, podcast.maxEpisodes);
+  episodes = res.episodes;
+  status = res.status;
 }
+
+// Messaggio diagnostico mostrato in pagina quando la griglia non c'è
+const diagMap: Record<FetchStatus, string> = {
+  ok: '',
+  empty: 'Nessun episodio trovato per questo show (controlla showId e market).',
+  'no-creds':
+    'Credenziali Spotify non rilevate durante la pubblicazione: aggiungi SPOTIFY_CLIENT_ID e SPOTIFY_CLIENT_SECRET nelle Environment Variables (Production) e fai un nuovo deploy.',
+  'token-error':
+    'Spotify ha rifiutato le credenziali (token): ricontrolla Client ID e Client Secret.',
+  'api-error': 'Errore nella richiesta degli episodi a Spotify (controlla showId/market).',
+  'network-error': 'Errore di rete verso Spotify durante la pubblicazione.',
+};
+const diagMessage = diagMap[status] ?? '';
 
 // 2) fallback: episodi inseriti a mano nel config
 if (episodes.length === 0 && podcast.episodes.length > 0) {
@@ -78,10 +100,9 @@ const hasShow = podcast.showId.trim() !== '';
           allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
           loading="lazy"
         ></iframe>
-        <p class="podcast__hint">
-          Per la griglia automatica di tutti gli episodi, imposta le credenziali Spotify
-          (<code>SPOTIFY_CLIENT_ID</code> / <code>SPOTIFY_CLIENT_SECRET</code>).
-        </p>
+        {diagMessage && (
+          <p class="podcast__diag" data-status={status}>⚠️ {diagMessage}</p>
+        )}
       </div>
     )}
   </div>
@@ -238,15 +259,17 @@ const hasShow = podcast.showId.trim() !== '';
     overflow: hidden;
     box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
   }
-  .podcast__hint {
-    margin-top: 1rem;
+  .podcast__diag {
+    margin-top: 1.25rem;
     text-align: center;
-    color: var(--text-dim);
-    font-size: 0.85rem;
-  }
-  .podcast__hint code {
-    background: rgba(63, 154, 166, 0.1);
-    padding: 0.15em 0.4em;
-    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    max-width: 60ch;
+    margin-inline: auto;
+    padding: 0.9rem 1.1rem;
+    border: 1px solid rgba(63, 154, 166, 0.25);
+    border-radius: var(--radius-sm);
+    background: rgba(63, 154, 166, 0.06);
   }
 </style>
