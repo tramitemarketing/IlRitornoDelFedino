@@ -120,55 +120,87 @@ export async function getShowEpisodes(
   if ('error' in tok) return { episodes: [], status: tok.error, detail: tok.detail };
   const token = tok.token;
   const tag = tok.userToken ? 'refresh:usato' : 'refresh:assente';
+  const auth = { Authorization: `Bearer ${token}` };
+
+  const mapItem = (it: any): Episode => ({
+    id: it.id,
+    name: it.name,
+    description: it.description ?? '',
+    releaseDate: it.release_date ?? '',
+    durationMs: it.duration_ms ?? 0,
+    image: it.images?.[0]?.url ?? null,
+    url: it.external_urls?.spotify ?? `https://open.spotify.com/episode/${it.id}`,
+  });
+
+  const errMsg = async (res: Response) => {
+    let msg = '';
+    try {
+      msg = (await res.json())?.error?.message || '';
+    } catch {}
+    return `HTTP ${res.status}${msg ? `: ${msg}` : ''}`;
+  };
 
   const lim = Math.min(50, limit);
-  // Proviamo prima CON market, poi SENZA (alcuni token/show falliscono col market).
+  let lastDetail = '';
+
+  // Tentativi in ordine: episodi (con market, senza market), poi Get Show.
   const starts = [
     `${API}/shows/${showId}/episodes?market=${market}&limit=${lim}`,
     `${API}/shows/${showId}/episodes?limit=${lim}`,
   ];
-
-  let lastDetail = '';
   for (const start of starts) {
     const out: Episode[] = [];
     let url: string | null = start;
     let failed = false;
     try {
       while (url && out.length < limit) {
-        const res: Response = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res: Response = await fetch(url, { headers: auth });
         if (!res.ok) {
-          lastDetail = `HTTP ${res.status}`;
-          console.warn(`[spotify] Errore recupero episodi (${lastDetail}) show ${showId} :: ${start}`);
+          lastDetail = await errMsg(res);
+          console.warn(`[spotify] Episodi KO (${lastDetail}) :: ${start}`);
           failed = true;
           break;
         }
         const data = await res.json();
-        for (const it of data.items ?? []) {
-          if (!it) continue;
-          out.push({
-            id: it.id,
-            name: it.name,
-            description: it.description ?? '',
-            releaseDate: it.release_date ?? '',
-            durationMs: it.duration_ms ?? 0,
-            image: it.images?.[0]?.url ?? null,
-            url: it.external_urls?.spotify ?? `https://open.spotify.com/episode/${it.id}`,
-          });
-        }
+        for (const it of data.items ?? []) if (it) out.push(mapItem(it));
         url = data.next ?? null;
       }
     } catch (e) {
-      console.warn('[spotify] Errore di rete nel recupero episodi:', e);
+      console.warn('[spotify] Errore di rete (episodi):', e);
       return { episodes: out, status: 'network-error', detail: String(e) };
     }
-
     if (!failed && out.length > 0) {
       console.log(`[spotify] Episodi recuperati: ${out.length} (show ${showId}).`);
       return { episodes: out.slice(0, limit), status: 'ok' };
     }
     if (!failed && out.length === 0) lastDetail = lastDetail || 'risposta vuota';
+  }
+
+  // Fallback: "Get Show" con episodi annidati (a volte passa quando l'altro dà 403)
+  try {
+    const res = await fetch(`${API}/shows/${showId}?market=${market}`, { headers: auth });
+    if (res.ok) {
+      const data = await res.json();
+      const out: Episode[] = [];
+      let page = data.episodes;
+      while (page && out.length < limit) {
+        for (const it of page.items ?? []) if (it) out.push(mapItem(it));
+        if (page.next && out.length < limit) {
+          const r2 = await fetch(page.next, { headers: auth });
+          if (!r2.ok) break;
+          page = await r2.json();
+        } else break;
+      }
+      if (out.length > 0) {
+        console.log(`[spotify] Episodi recuperati via Get Show: ${out.length}.`);
+        return { episodes: out.slice(0, limit), status: 'ok' };
+      }
+    } else {
+      lastDetail = await errMsg(res);
+      console.warn(`[spotify] Get Show KO (${lastDetail}).`);
+    }
+  } catch (e) {
+    console.warn('[spotify] Errore di rete (Get Show):', e);
   }
 
   return {
