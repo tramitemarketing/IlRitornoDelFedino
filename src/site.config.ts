@@ -17,13 +17,13 @@ export const siteConfig = {
   siteName: 'Il Ritorno del Fedino',
   /** Descrizione per Google e anteprime social */
   description:
-    'Sito personale e podcast del Prof. Fedino — voce, idee e conversazioni. Ascolta gli episodi su Spotify.',
+    'Sito personale e podcast di Iacopo Fedi — voce, idee e conversazioni. Ascolta gli episodi su Spotify.',
   /** Lingua del sito */
   lang: 'it',
 
   /** Dati del professore */
   professor: {
-    name: 'Prof. Fedino',
+    name: 'Iacopo Fedi',
     /** Frase d'effetto mostrata nella home animata */
     tagline: 'Pensiero, voce e ritorno.',
     /** Materia / ambito (usata in bio e SEO) */
@@ -41,13 +41,13 @@ export const siteConfig = {
      * Lo trovi nell'URL: open.spotify.com/show/XXXXXXXX
      * Lascia stringa vuota '' se vuoi mostrare solo i singoli episodi.
      */
-    showId: '',
+    showId: '5oWtSGw6X75uomzzW6UK9V',
     /** Episodi in evidenza (player singoli) */
     episodes: [
       // Esempio: { id: '4rOoJ6Egrf8K2IrywzwOMk', title: 'Episodio pilota' },
     ] as SpotifyEpisode[],
     /** Link diretto al profilo Spotify (per il bottone "Segui") */
-    spotifyUrl: 'https://open.spotify.com/',
+    spotifyUrl: 'https://open.spotify.com/show/5oWtSGw6X75uomzzW6UK9V',
   },
 
   /** Biografia (mostrata in fondo, in secondo piano rispetto alla home) */

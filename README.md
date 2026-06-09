@@ -1,6 +1,6 @@
 # 🎙️ Il Ritorno del Fedino
 
-Sito personale del **Prof. Fedino** con sezione **podcast embeddata da Spotify**, pensata per massimizzare gli ascolti.
+Sito personale di **Iacopo Fedi** con sezione **podcast embeddata da Spotify**, pensata per massimizzare gli ascolti.
 
 Stack: **[Astro 5](https://astro.build)** · tema **dark "audio-first"** · deploy su **Netlify/Vercel**.
 
@@ -10,14 +10,15 @@ Stack: **[Astro 5](https://astro.build)** · tema **dark "audio-first"** · depl
 
 L'esperienza è costruita su tre atti, in ordine di importanza:
 
-1. **Home = animazione pazzesca** 🎆
-   Hero a tutto schermo con un **campo di particelle generativo + onde sonore**, interattivo col mouse, in canvas 2D (zero dipendenze, performante). Tema neon su nero, a tema "audio".
+1. **Home = scena noir guidata dallo scroll** 🎬
+   Intro cinematografica in canvas 2D (vettoriale, zero dipendenze): un'**auto scura entra in un vicolo cieco e si accosta al marciapiede**, poi la scena **sfuma al nero e si apre il sito**. Lo scroll è la timeline → l'animazione è **reversibile** (scroll su = l'auto torna indietro). Vista in terza persona, palette navy. Fallback statico su `prefers-reduced-motion`.
 2. **Podcast (Spotify)** 🎧
    Cuore del progetto per il guadagno ascolti: player **show** completo + **episodi** in evidenza, bottone "Segui su Spotify".
 3. **Bio in fondo, in secondo piano** 👤
    Biografia sobria e discreta, come da richiesta — il focus resta su animazione e podcast.
 
 ### Idee future (facili da aggiungere)
+- 🎥 Sostituire la scena vettoriale con un **video/sequenza pre-renderizzata** scrubbata, per il fotorealismo (l'impianto scroll resta identico).
 - 🔊 Animazione che reagisce **all'audio reale** (Web Audio API) quando si avvia un player.
 - 📨 Newsletter / iscrizione per nuovi episodi.
 - 📝 Sezione **blog/note** in Markdown (Astro Content Collections).
@@ -30,8 +31,8 @@ L'esperienza è costruita su tre atti, in ordine di importanza:
 
 | Elemento      | Scelta |
 |---------------|--------|
-| Tema          | Dark, "audio-first" (sfondo `#07080d`) |
-| Accenti       | Viola `#6c5ce7` · Turchese `#00e0c6` · Rosa `#ff5d8f` |
+| Tema          | Dark noir navy (sfondo `#02020A`) |
+| Palette       | `#02020A` · `#030612` · `#030A1A` · `#05204A` · `#73819D` |
 | Tipografia    | **Space Grotesk** (titoli) · **Inter** (testo) |
 | Tono          | Moderno, immersivo, autorevole ma vivo |
 | Movimento     | Generativo e fluido, ma rispetta `prefers-reduced-motion` |
@@ -45,7 +46,7 @@ I **design token** (colori, font, raggi) sono in [`src/styles/global.css`](src/s
 ```mermaid
 graph TD
     A["index.astro<br/>(pagina unica)"] --> B["Base.astro<br/>(layout · SEO · font · reveal)"]
-    B --> H["Hero.astro<br/>🎆 animazione canvas"]
+    B --> H["Hero.astro<br/>🎬 scena noir scroll-driven"]
     B --> P["PodcastSection.astro<br/>🎧 embed Spotify"]
     B --> Bio["BioSection.astro<br/>👤 bio + contatti + footer"]
 
@@ -81,7 +82,7 @@ flowchart LR
 │   └── favicon.svg            # icona (equalizer gradient)
 ├── src/
 │   ├── components/
-│   │   ├── Hero.astro         # 🎆 animazione home (canvas)
+│   │   ├── Hero.astro         # 🎬 scena noir scroll-driven (canvas)
 │   │   ├── PodcastSection.astro  # 🎧 embed Spotify
 │   │   └── BioSection.astro   # 👤 bio + contatti + footer
 │   ├── layouts/

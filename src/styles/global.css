@@ -2,22 +2,24 @@
    DESIGN TOKENS — Tema "dark audio-first"
    ========================================================= */
 :root {
-  /* Colori base scuri */
-  --bg: #07080d;
-  --bg-soft: #0d0f18;
-  --surface: #12141f;
-  --surface-2: #181b29;
+  /* Palette navy noir (dal piu scuro al piu chiaro) */
+  --ink: #02020a;          /* near-black assoluto */
+  --bg: #02020a;
+  --bg-soft: #030612;
+  --surface: #030a1a;
+  --surface-2: #05204a;    /* blu profondo */
+  --slate: #73819d;        /* unico tono chiaro: grigio-azzurro */
 
   /* Testo */
-  --text: #f2f3f8;
-  --text-muted: #9aa0b4;
-  --text-dim: #626a82;
+  --text: #e6ebf3;
+  --text-muted: #8b97ad;
+  --text-dim: #5b6678;
 
-  /* Accenti "neon audio" */
-  --accent: #6c5ce7;       /* viola */
-  --accent-2: #00e0c6;     /* turchese */
-  --accent-3: #ff5d8f;     /* rosa */
-  --glow: 0 0 40px rgba(108, 92, 231, 0.45);
+  /* Accenti (monocromatici sulla palette) */
+  --accent: #73819d;       /* slate */
+  --accent-2: #9fb0cf;     /* slate chiarito, per highlight */
+  --accent-3: #05204a;     /* blu profondo */
+  --glow: 0 0 40px rgba(115, 129, 157, 0.35);
 
   /* Tipografia */
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -86,12 +88,12 @@ button { font: inherit; cursor: pointer; }
   font-size: 0.8rem;
   letter-spacing: 0.25em;
   text-transform: uppercase;
-  color: var(--accent-2);
+  color: var(--accent);
   margin-bottom: 1rem;
 }
 
 .gradient-text {
-  background: linear-gradient(120deg, var(--accent-2), var(--accent), var(--accent-3));
+  background: linear-gradient(120deg, #c5cee0, var(--slate), #5a6a8f);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
