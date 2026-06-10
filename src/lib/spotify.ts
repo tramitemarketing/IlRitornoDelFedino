@@ -117,7 +117,12 @@ export async function getShowEpisodes(
   if (!showId) return { episodes: [], status: 'api-error', detail: 'showId mancante' };
 
   const tok = await getToken();
-  if ('error' in tok) return { episodes: [], status: tok.error, detail: tok.detail };
+  // Senza credenziali si salta l'API e si prova direttamente l'embed pubblico.
+  if ('error' in tok) {
+    const emb = await getEpisodesFromEmbed(showId, limit);
+    if (emb.length > 0) return { episodes: emb, status: 'ok' };
+    return { episodes: [], status: tok.error, detail: tok.detail };
+  }
   const token = tok.token;
   const tag = tok.userToken ? 'refresh:usato' : 'refresh:assente';
   const auth = { Authorization: `Bearer ${token}` };
@@ -203,11 +208,90 @@ export async function getShowEpisodes(
     console.warn('[spotify] Errore di rete (Get Show):', e);
   }
 
+  // Ultimo fallback: pagina embed pubblica (nessuna credenziale richiesta).
+  // Spotify ha chiuso l'API podcast alle app personali (403), ma il player
+  // embed contiene la lista episodi in JSON.
+  const emb = await getEpisodesFromEmbed(showId, limit);
+  if (emb.length > 0) return { episodes: emb, status: 'ok' };
+
   return {
     episodes: [],
     status: lastDetail.startsWith('HTTP') ? 'api-error' : 'empty',
-    detail: `${lastDetail} · ${tag}`,
+    detail: `${lastDetail} · ${tag} · embed:vuoto`,
   };
+}
+
+/**
+ * Estrae la lista episodi dal JSON interno della pagina embed pubblica
+ * (open.spotify.com/embed/show/ID). Non richiede credenziali.
+ * Ricerca ricorsiva difensiva: trova ovunque oggetti con uri spotify:episode:.
+ */
+export async function getEpisodesFromEmbed(showId: string, limit = 50): Promise<Episode[]> {
+  try {
+    const res = await fetch(`https://open.spotify.com/embed/show/${showId}`, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Accept-Language': 'it',
+      },
+    });
+    if (!res.ok) {
+      console.warn(`[spotify] Embed KO (HTTP ${res.status}).`);
+      return [];
+    }
+    const html = await res.text();
+    const m = html.match(
+      /<script id="__NEXT_DATA__" type="application\/json"[^>]*>([\s\S]*?)<\/script>/,
+    );
+    if (!m) {
+      console.warn('[spotify] Embed: __NEXT_DATA__ non trovato.');
+      return [];
+    }
+    const data = JSON.parse(m[1]);
+
+    const found = new Map<string, Episode>();
+    const visit = (node: any) => {
+      if (!node || typeof node !== 'object') return;
+      if (Array.isArray(node)) {
+        for (const n of node) visit(n);
+        return;
+      }
+      const uri = node.uri ?? node.episodeUri;
+      if (typeof uri === 'string' && uri.startsWith('spotify:episode:')) {
+        const id = uri.split(':')[2];
+        const name = node.name ?? node.title ?? '';
+        if (id && name && !found.has(id)) {
+          found.set(id, {
+            id,
+            name,
+            description: node.description ?? '',
+            releaseDate:
+              node.releaseDate?.isoString ??
+              (typeof node.releaseDate === 'string' ? node.releaseDate : '') ??
+              '',
+            durationMs:
+              node.duration?.totalMilliseconds ?? node.duration_ms ?? node.duration ?? 0,
+            image:
+              node.coverArt?.sources?.[0]?.url ??
+              node.images?.[0]?.url ??
+              null,
+            url: `https://open.spotify.com/episode/${id}`,
+          });
+        }
+      }
+      for (const k in node) visit(node[k]);
+    };
+    visit(data);
+
+    const out = [...found.values()];
+    // Più recenti prima, se la data è disponibile
+    out.sort((a, b) => (b.releaseDate || '').localeCompare(a.releaseDate || ''));
+    console.log(`[spotify] Episodi via embed: ${out.length} (show ${showId}).`);
+    return out.slice(0, limit);
+  } catch (e) {
+    console.warn('[spotify] Errore embed:', e);
+    return [];
+  }
 }
 
 /** Formatta una durata in ms come "12 min" o "1 h 03 min". */

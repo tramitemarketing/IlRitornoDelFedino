@@ -31,24 +31,28 @@ const diagMap: Record<FetchStatus, string> = {
   'token-error':
     'Spotify ha rifiutato le credenziali (token): ricontrolla Client ID e Client Secret.',
   'api-error':
-    'Spotify blocca la lista episodi senza login utente. Configura SPOTIFY_REFRESH_TOKEN (npm run spotify:auth, vedi README) e rifai il deploy.',
+    "Spotify ha bloccato sia l'API sia la lettura dell'embed per la lista episodi. Incolla i link degli episodi in site.config.ts → podcast.episodes.",
   'network-error': 'Errore di rete verso Spotify durante la pubblicazione.',
 };
 const diagMessage = diagMap[status]
   ? diagMap[status] + (detail ? ` [${detail}]` : '')
   : '';
 
-// 2) fallback: episodi inseriti a mano nel config (solo layout 'grid')
+// 2) fallback: episodi inseriti a mano nel config (solo layout 'grid').
+// Accetta sia l'ID puro sia il link completo open.spotify.com/episode/...
 if (layout === 'grid' && episodes.length === 0 && podcast.episodes.length > 0) {
-  episodes = podcast.episodes.map((e) => ({
-    id: e.id,
-    name: e.title ?? 'Episodio',
-    description: '',
-    releaseDate: '',
-    durationMs: 0,
-    image: null,
-    url: `https://open.spotify.com/episode/${e.id}`,
-  }));
+  episodes = podcast.episodes.map((e) => {
+    const id = e.id.match(/episode\/([A-Za-z0-9]+)/)?.[1] ?? e.id;
+    return {
+      id,
+      name: e.title ?? 'Episodio',
+      description: '',
+      releaseDate: '',
+      durationMs: 0,
+      image: null,
+      url: `https://open.spotify.com/episode/${id}`,
+    };
+  });
 }
 
 const hasShow = podcast.showId.trim() !== '';
