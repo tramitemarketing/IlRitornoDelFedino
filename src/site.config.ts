@@ -34,8 +34,8 @@ export const siteConfig = {
   intro: {
     /** Titolo mostrato sullo schermo nero iniziale */
     titleScreen: 'Il Ritorno del Fedino',
-    /** Sottotitolo opzionale sotto il titolo iniziale */
-    titleSub: 'di Iacopo Fedi',
+    /** Sottotitolo opzionale sotto il titolo iniziale ('' per nasconderlo) */
+    titleSub: '',
     /**
      * Video dell'intro (scrubbato dallo scroll, reversibile).
      * Se vuoto, parte la scena vettoriale di fallback (canvas).
@@ -67,10 +67,17 @@ export const siteConfig = {
 
   /** Sezione podcast */
   podcast: {
-    /** Nome del podcast */
-    name: 'Il Ritorno del Fedino',
-    /** Sottotitolo / claim della sezione */
-    subtitle: 'Conversazioni, lezioni e divagazioni. Tutti gli episodi, qui.',
+    /** Etichetta sopra il titolo ('' per nasconderla) */
+    eyebrow: '',
+    /** Titolo della sezione */
+    name: 'Dalla parte sbagliata della strada',
+    /** Sottotitolo / claim della sezione ('' per nasconderlo) */
+    subtitle: '',
+    /**
+     * Mostra gli episodi (griglia/player). false = modalità ANTEPRIMA:
+     * resta solo il titolo + il bottone "Segui su Spotify".
+     */
+    showEpisodes: false,
     /**
      * ID dello SHOW Spotify.
      * Lo trovi nell'URL: open.spotify.com/show/XXXXXXXX
