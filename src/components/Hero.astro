@@ -39,11 +39,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
     {intro.titleSub && <p class="intro__sub">{intro.titleSub}</p>}
   </div>
 
-  <!-- Tasto play (mostrato solo se l'autoplay è bloccato) -->
-  <button class="intro__play" id="intro-play" type="button" aria-label="Riproduci intro" hidden>
-    <svg viewBox="0 0 24 24" width="34" height="34" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-  </button>
-
   <!-- Tasto salta -->
   <button class="intro__skip" id="intro-skip" type="button" hidden>
     Salta
@@ -123,25 +118,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
     font-size: clamp(0.7rem, 2vw, 0.9rem);
   }
 
-  .intro__play {
-    position: absolute;
-    inset: 0;
-    margin: auto;
-    z-index: 4;
-    width: 84px;
-    height: 84px;
-    border-radius: 50%;
-    border: 1px solid rgba(63, 154, 166, 0.5);
-    color: #eef3f3;
-    background: rgba(4, 40, 46, 0.7);
-    backdrop-filter: blur(6px);
-    display: grid;
-    place-items: center;
-    padding-left: 4px;
-    transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
-  }
-  .intro__play:hover { transform: scale(1.08); box-shadow: var(--glow); }
-
   .intro__skip {
     position: absolute;
     bottom: 1.6rem;
@@ -177,7 +153,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
   const black = document.getElementById('intro-black');
   const title = document.getElementById('intro-title');
   const skip = document.getElementById('intro-skip') as HTMLButtonElement | null;
-  const playBtn = document.getElementById('intro-play') as HTMLButtonElement | null;
   const video = document.getElementById('intro-video') as HTMLVideoElement | null;
   const canvas = document.getElementById('alley-canvas') as HTMLCanvasElement | null;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -211,7 +186,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
       setTitle(0);
       setBlack(1);
       show(skip, false);
-      show(playBtn, false);
       lockScroll(false);
       if (video) try { video.pause(); } catch {}
       if (lockedRun) {
@@ -243,12 +217,8 @@ const hasVideo = intro.videoSrc.trim() !== '';
 
       if (video) {
         show(skip, true);
-        try {
-          await video.play();
-        } catch {
-          if (my !== token) return;
-          show(playBtn, true); // autoplay bloccato: l'utente tocca per avviare
-        }
+        // autoplay muto: se il browser lo blocca, resta comunque il tasto "Salta"
+        try { await video.play(); } catch {}
       }
     }
 
@@ -265,10 +235,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
     }
 
     skip?.addEventListener('click', finish);
-    playBtn?.addEventListener('click', async () => {
-      show(playBtn, false);
-      try { await video?.play(); } catch {}
-    });
 
     // --- Riparte tornando in cima ---
     const io = new IntersectionObserver(
