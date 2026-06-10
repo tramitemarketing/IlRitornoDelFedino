@@ -4,65 +4,58 @@ const { intro } = siteConfig;
 const hasVideo = intro.videoSrc.trim() !== '';
 ---
 
-<section
-  class="intro"
-  id="home"
-  data-has-video={hasVideo ? 'true' : 'false'}
-  data-smoothing={String(intro.smoothing)}
-  style={`--intro-scroll: ${intro.scrollVh}vh`}
->
-  <div class="intro__stage">
-    {hasVideo ? (
-      <video
-        id="intro-video"
-        class="intro__media intro__video"
-        muted
-        playsinline
-        preload="auto"
-        poster={intro.poster || undefined}
-        aria-hidden="true"
-        style={intro.filter ? `filter: ${intro.filter}` : undefined}
-      >
-        {intro.videoWebm && <source src={intro.videoWebm} type="video/webm" />}
-        <source src={intro.videoSrc} type="video/mp4" />
-      </video>
-    ) : (
-      <canvas id="alley-canvas" class="intro__media" aria-hidden="true"></canvas>
-    )}
+<section class="intro" id="home">
+  {hasVideo ? (
+    <video
+      id="intro-video"
+      class="intro__media"
+      muted
+      playsinline
+      preload="auto"
+      poster={intro.poster || undefined}
+      aria-hidden="true"
+      style={intro.filter ? `filter: ${intro.filter}` : undefined}
+    >
+      {intro.videoWebm && <source src={intro.videoWebm} type="video/webm" />}
+      <source src={intro.videoSrc} type="video/mp4" />
+    </video>
+  ) : (
+    <canvas id="alley-canvas" class="intro__media" aria-hidden="true"></canvas>
+  )}
 
-    <!-- Velo di colore (grade noir) sopra i frame del video -->
-    {hasVideo && intro.gradeColor && (
-      <div
-        class="intro__grade"
-        style={`background:${intro.gradeColor}; opacity:${intro.gradeOpacity}`}
-      ></div>
-    )}
+  {hasVideo && intro.gradeColor && (
+    <div
+      class="intro__grade"
+      style={`background:${intro.gradeColor}; opacity:${intro.gradeOpacity}`}
+    ></div>
+  )}
 
-    <!-- Velo nero: schermata iniziale + dissolvenza finale -->
-    <div class="intro__black" id="intro-black"></div>
+  <!-- Velo nero: schermata iniziale + dissolvenza finale -->
+  <div class="intro__black" id="intro-black"></div>
 
-    <!-- Titolo sullo schermo nero iniziale -->
-    <div class="intro__title" id="intro-title">
-      <h1 class="intro__name gradient-text">{intro.titleScreen}</h1>
-      {intro.titleSub && <p class="intro__sub">{intro.titleSub}</p>}
-    </div>
-
-    <div class="intro__hint" id="intro-hint" aria-hidden="true">
-      <span>scorri</span>
-      <div class="intro__hint-line"></div>
-    </div>
+  <!-- Titolo sullo schermo nero iniziale -->
+  <div class="intro__title" id="intro-title">
+    <h1 class="intro__name gradient-text">{intro.titleScreen}</h1>
+    {intro.titleSub && <p class="intro__sub">{intro.titleSub}</p>}
   </div>
+
+  <!-- Tasto play (mostrato solo se l'autoplay è bloccato) -->
+  <button class="intro__play" id="intro-play" type="button" aria-label="Riproduci intro" hidden>
+    <svg viewBox="0 0 24 24" width="34" height="34" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+  </button>
+
+  <!-- Tasto salta -->
+  <button class="intro__skip" id="intro-skip" type="button" hidden>
+    Salta
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  </button>
 </section>
 
 <style>
   .intro {
     position: relative;
-    height: var(--intro-scroll, 360vh);
-    background: #000;
-  }
-  .intro__stage {
-    position: sticky;
-    top: 0;
     height: 100vh;
     height: 100svh;
     overflow: hidden;
@@ -77,7 +70,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
     display: block;
   }
 
-  /* Velo di colore (grade) + vignettatura sopra il video */
   .intro__grade {
     position: absolute;
     inset: 0;
@@ -90,7 +82,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
     position: absolute;
     inset: 0;
     background: radial-gradient(70% 60% at 50% 45%, transparent 40%, rgba(0, 0, 0, 0.6));
-    mix-blend-mode: normal;
   }
 
   .intro__black {
@@ -98,6 +89,8 @@ const hasVideo = intro.videoSrc.trim() !== '';
     inset: 0;
     z-index: 2;
     background: #000;
+    opacity: 1; /* parte nero */
+    transition: opacity 0.7s ease;
     pointer-events: none;
   }
 
@@ -109,8 +102,9 @@ const hasVideo = intro.videoSrc.trim() !== '';
     place-content: center;
     text-align: center;
     padding: 1.5rem;
+    opacity: 1; /* titolo visibile sul nero iniziale */
+    transition: opacity 0.7s ease;
     pointer-events: none;
-    will-change: opacity, transform;
   }
   .intro__name {
     font-family: var(--font-display);
@@ -129,127 +123,189 @@ const hasVideo = intro.videoSrc.trim() !== '';
     font-size: clamp(0.7rem, 2vw, 0.9rem);
   }
 
-  .intro__hint {
+  .intro__play {
     position: absolute;
-    bottom: 2rem;
+    inset: 0;
+    margin: auto;
+    z-index: 4;
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    border: 1px solid rgba(63, 154, 166, 0.5);
+    color: #eef3f3;
+    background: rgba(4, 40, 46, 0.7);
+    backdrop-filter: blur(6px);
+    display: grid;
+    place-items: center;
+    padding-left: 4px;
+    transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  }
+  .intro__play:hover { transform: scale(1.08); box-shadow: var(--glow); }
+
+  .intro__skip {
+    position: absolute;
+    bottom: 1.6rem;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 3;
-    display: flex;
-    flex-direction: column;
+    z-index: 4;
+    display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
-    color: var(--text-dim);
+    gap: 0.4rem;
+    padding: 0.55rem 1.1rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(6px);
+    color: var(--text-muted);
     font-family: var(--font-display);
-    font-size: 0.7rem;
-    letter-spacing: 0.3em;
+    font-size: 0.78rem;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    pointer-events: none;
+    transition: color 0.3s var(--ease), border-color 0.3s var(--ease);
   }
-  .intro__hint-line {
-    width: 1px;
-    height: 42px;
-    background: linear-gradient(var(--teal-bright), transparent);
-    animation: hintpulse 1.8s var(--ease) infinite;
-    transform-origin: top;
-  }
-  @keyframes hintpulse {
-    0% { transform: scaleY(0); opacity: 0; }
-    40% { transform: scaleY(1); opacity: 1; }
-    100% { transform: scaleY(1) translateY(20px); opacity: 0; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .intro { height: 100svh; }
-    .intro__hint { display: none; }
-  }
+  .intro__skip:hover { color: var(--text); border-color: var(--teal-bright); }
 </style>
 
 <script>
   // ===========================================================
-  // HOME — Intro: schermo nero col titolo -> scena (video
-  // scrubbato dallo scroll, oppure canvas vettoriale) -> nero.
-  // Tutto è funzione pura di (progress) => reversibile.
+  // HOME — Intro AUTOPLAY: schermo nero col titolo -> video
+  // (parte da solo) -> dissolvenza al nero -> contenuti.
+  // "Guarda-poi-continua": scroll bloccato finché non finisce
+  // (con tasto Salta). Riparte quando si torna in cima.
   // ===========================================================
   const section = document.querySelector<HTMLElement>('.intro');
-  const blackEl = document.getElementById('intro-black');
-  const titleEl = document.getElementById('intro-title');
-  const hintEl = document.getElementById('intro-hint');
+  const black = document.getElementById('intro-black');
+  const title = document.getElementById('intro-title');
+  const skip = document.getElementById('intro-skip') as HTMLButtonElement | null;
+  const playBtn = document.getElementById('intro-play') as HTMLButtonElement | null;
+  const video = document.getElementById('intro-video') as HTMLVideoElement | null;
+  const canvas = document.getElementById('alley-canvas') as HTMLCanvasElement | null;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
-  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-  const smooth = (e0: number, e1: number, x: number) => {
-    const t = clamp((x - e0) / (e1 - e0));
-    return t * t * (3 - 2 * t);
-  };
-  const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-
-  // Finestra temporale della "scena" dentro lo scroll totale
-  const SCENE_IN = 0.12, SCENE_OUT = 0.85;
+  const TITLE_MS = 1300;     // durata schermata nera col titolo
+  const END_FADE_S = 0.8;    // secondi finali di dissolvenza al nero
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   if (section) {
-    const video = document.getElementById('intro-video') as HTMLVideoElement | null;
-    const canvas = document.getElementById('alley-canvas') as HTMLCanvasElement | null;
+    let running = false;
+    let completed = false;
+    let faded = false;
+    let lockedRun = false;
+    let token = 0;
 
-    function progressNow() {
-      const total = section!.offsetHeight - window.innerHeight;
-      if (total <= 0) return 0;
-      return clamp(-section!.getBoundingClientRect().top / total);
+    const setBlack = (a: number) => black && (black.style.opacity = String(a));
+    const setTitle = (a: number) => title && (title.style.opacity = String(a));
+    const show = (el: HTMLElement | null, on: boolean) => el && (el.hidden = !on);
+
+    function lockScroll(on: boolean) {
+      const v = on ? 'hidden' : '';
+      document.documentElement.style.overflow = v;
+      document.body.style.overflow = v;
     }
 
-    function updateOverlays(p: number) {
-      const startBlack = 1 - smooth(0, SCENE_IN - 0.01, p);
-      const endBlack = smooth(SCENE_OUT, 1, p);
-      if (blackEl) blackEl.style.opacity = String(Math.max(startBlack, endBlack));
-      const titleK = 1 - smooth(0.03, SCENE_IN, p);
-      if (titleEl) {
-        titleEl.style.opacity = String(titleK);
-        titleEl.style.transform = `translateY(${(-16 * (1 - titleK)).toFixed(1)}px)`;
+    function finish() {
+      token++;                 // invalida eventuali sequenze in sospeso
+      running = false;
+      completed = true;
+      faded = true;
+      setTitle(0);
+      setBlack(1);
+      show(skip, false);
+      show(playBtn, false);
+      lockScroll(false);
+      if (video) try { video.pause(); } catch {}
+      if (lockedRun) {
+        document.getElementById('podcast')?.scrollIntoView({ behavior: 'smooth' });
       }
-      if (hintEl) hintEl.style.opacity = String(1 - smooth(0, 0.06, p));
+      lockedRun = false;
     }
 
-    const sceneProgress = (p: number) => smooth(SCENE_IN, SCENE_OUT, p);
+    async function run(lock: boolean) {
+      if (running) return;
+      running = true;
+      lockedRun = lock;
+      completed = false;
+      faded = false;
+      const my = ++token;
 
-    // ---------------- MODalità VIDEO ----------------
-    function setupVideo(v: HTMLVideoElement) {
-      let duration = 0;
-      // Fattore di ammorbidimento (da data-smoothing); più basso = più fluido/lento
-      const smoothing = Math.min(0.5, Math.max(0.03, Number(section!.dataset.smoothing) || 0.09));
-      let cur = 0;        // tempo "ammorbidito" mostrato
-      let target = 0;     // tempo desiderato dallo scroll
+      setBlack(1);
+      setTitle(1);
+      if (lock) lockScroll(true);
+      if (video) {
+        try { video.pause(); video.currentTime = 0; } catch {}
+      }
 
-      v.pause();
-      const onMeta = () => {
-        duration = v.duration || 0;
-        cur = v.currentTime || 0;
-      };
-      v.addEventListener('loadedmetadata', onMeta);
-      if (v.readyState >= 1) onMeta();
+      await wait(TITLE_MS);
+      if (my !== token) return; // sostituita/annullata
 
-      function frame() {
-        const p = progressNow();
-        updateOverlays(p);
-        if (duration > 0) {
-          target = clamp(sceneProgress(p)) * duration;
-          // interpolazione: il tempo insegue dolcemente il target
-          cur += (target - cur) * smoothing;
-          if (Math.abs(target - cur) < 0.004) cur = target;
-          // un solo seek alla volta: evita l'accumulo che fa "saltare" i frame
-          if (!v.seeking && Math.abs((v.currentTime || 0) - cur) > 0.012) {
-            try { v.currentTime = cur; } catch {}
-          }
+      setTitle(0);
+      setBlack(0);
+
+      if (video) {
+        show(skip, true);
+        try {
+          await video.play();
+        } catch {
+          if (my !== token) return;
+          show(playBtn, true); // autoplay bloccato: l'utente tocca per avviare
         }
-        raf = requestAnimationFrame(frame);
       }
-      let raf = requestAnimationFrame(frame);
     }
 
-    // ---------------- MODalità CANVAS (fallback) ----------------
+    // --- Eventi video ---
+    if (video) {
+      video.addEventListener('timeupdate', () => {
+        const d = video.duration || 0;
+        if (d > 0 && !faded && video.currentTime >= d - END_FADE_S) {
+          faded = true;
+          setBlack(1); // dissolvenza al nero (blend col fondo)
+        }
+      });
+      video.addEventListener('ended', finish);
+    }
+
+    skip?.addEventListener('click', finish);
+    playBtn?.addEventListener('click', async () => {
+      show(playBtn, false);
+      try { await video?.play(); } catch {}
+    });
+
+    // --- Riparte tornando in cima ---
+    const io = new IntersectionObserver(
+      (entries) => {
+        const e = entries[0];
+        if (e.isIntersecting && e.intersectionRatio >= 0.9 && completed && !running) {
+          run(false); // replay senza ribloccare lo scroll
+        }
+      },
+      { threshold: [0, 0.9, 1] },
+    );
+    io.observe(section);
+
+    // --- Avvio ---
+    if (reduce) {
+      // Niente autoplay: mostra il primo fotogramma, nessun blocco
+      setBlack(0);
+      setTitle(0);
+      lockScroll(false);
+    } else if (video) {
+      run(true);
+    } else if (canvas) {
+      // Fallback vettoriale: titolo poi scena in loop (no gate)
+      setupCanvas(canvas);
+    }
+
+    // ---------------- CANVAS (fallback senza video) ----------------
     function setupCanvas(cv: HTMLCanvasElement) {
       const ctx = cv.getContext('2d')!;
       let w = 0, h = 0, dpr = 1;
+      const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+      const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+      const smooth = (e0: number, e1: number, x: number) => {
+        const t = clamp((x - e0) / (e1 - e0));
+        return t * t * (3 - 2 * t);
+      };
+      const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
       function resize() {
         dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -257,7 +313,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
         cv.width = Math.floor(w * dpr); cv.height = Math.floor(h * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
-
       function roundRect(x: number, y: number, ww: number, hh: number, r: number) {
         ctx.beginPath();
         ctx.moveTo(x + r, y);
@@ -267,10 +322,8 @@ const hasVideo = intro.videoSrc.trim() !== '';
         ctx.arcTo(x, y, x + ww, y, r);
         ctx.closePath();
       }
-
       function drawWheel(x: number, y: number, r: number, ang: number) {
-        ctx.save();
-        ctx.translate(x, y);
+        ctx.save(); ctx.translate(x, y);
         ctx.fillStyle = '#020405';
         ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
         ctx.rotate(ang);
@@ -282,7 +335,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
         }
         ctx.restore();
       }
-
       function drawCar(cx: number, cy: number, s: number, ang: number, light: number, brake: number) {
         const L = w * 0.22 * s, H = L * 0.30, wr = H * 0.42;
         ctx.save(); ctx.translate(cx, cy);
@@ -301,8 +353,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
         ctx.moveTo(-L * 0.20, -H * 0.24); ctx.lineTo(-L * 0.10, -H * 0.70);
         ctx.lineTo(L * 0.12, -H * 0.70); ctx.lineTo(L * 0.24, -H * 0.24);
         ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = 'rgba(95,185,196,0.25)'; ctx.lineWidth = 1;
-        roundRect(-L / 2, -H * 0.2, L, H, H * 0.42); ctx.stroke();
         drawWheel(-L * 0.30, H * 0.78, wr, ang);
         drawWheel(L * 0.30, H * 0.78, wr, ang);
         const hx = -L * 0.5, hy = H * 0.18;
@@ -310,8 +360,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
           ctx.fillStyle = `rgba(190,236,240,${0.9 * light})`;
           ctx.beginPath(); ctx.arc(hx, hy, H * 0.12, 0, Math.PI * 2); ctx.fill();
         }
-        ctx.fillStyle = `rgba(255,70,70,${0.3 + brake * 0.6})`;
-        ctx.beginPath(); ctx.arc(L * 0.5, hy, H * 0.1, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
         if (light > 0.01) {
           const bx = cx + hx, by = cy + hy;
@@ -325,44 +373,13 @@ const hasVideo = intro.videoSrc.trim() !== '';
           ctx.closePath(); ctx.fill();
         }
       }
-
-      function drawWindows(VPx: number, VPy: number) {
-        const depths = [0.16, 0.3, 0.44, 0.57, 0.68];
-        const nearL = w * 0.04, nearR = w * 0.96;
-        const farL = VPx - w * 0.045, farR = VPx + w * 0.045;
-        depths.forEach((t, row) => {
-          const y = lerp(h, VPy + h * 0.02, t);
-          const size = lerp(26, 4, t);
-          const xL = lerp(nearL, farL, t), xR = lerp(nearR, farR, t);
-          for (let c = 0; c < 3; c++) {
-            const lit = ((row * 7 + c * 13) % 5) < 2;
-            const a = lit ? lerp(0.18, 0.04, t) : lerp(0.04, 0.01, t);
-            const wy = y - size * (2.2 + c * 1.6);
-            ctx.fillStyle = `rgba(63,154,166,${a})`;
-            ctx.fillRect(xL + size * 0.4, wy, size * 0.7, size * 1.1);
-            ctx.fillRect(xR - size * 1.1, wy, size * 0.7, size * 1.1);
-          }
-        });
-      }
-
       function draw(sp: number, time: number) {
         ctx.clearRect(0, 0, w, h);
         const VPx = w * 0.5, VPy = h * 0.42, groundY = h * 0.99;
-        const flick = 0.85 + Math.sin(time * 0.004) * 0.06 + Math.sin(time * 0.017) * 0.03;
-
+        const flick = 0.85 + Math.sin(time * 0.004) * 0.06;
         const sky = ctx.createLinearGradient(0, 0, 0, h);
         sky.addColorStop(0, '#02080a'); sky.addColorStop(0.6, '#010405'); sky.addColorStop(1, '#000');
         ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
-
-        const bwW = w * 0.13, bwH = h * 0.16;
-        ctx.fillStyle = '#04282e';
-        ctx.fillRect(VPx - bwW / 2, VPy - bwH * 0.7, bwW, bwH);
-        const halo = ctx.createRadialGradient(VPx, VPy - bwH * 0.2, 0, VPx, VPy - bwH * 0.2, w * 0.18);
-        halo.addColorStop(0, `rgba(63,154,166,${0.16 * flick})`); halo.addColorStop(1, 'rgba(63,154,166,0)');
-        ctx.fillStyle = halo; ctx.fillRect(0, 0, w, h);
-
-        drawWindows(VPx, VPy);
-
         const nearL = w * 0.06, nearR = w * 0.94;
         const farL = VPx - w * 0.05, farR = VPx + w * 0.05, farY = VPy + h * 0.02;
         const road = ctx.createLinearGradient(0, farY, 0, groundY);
@@ -371,73 +388,35 @@ const hasVideo = intro.videoSrc.trim() !== '';
         ctx.beginPath();
         ctx.moveTo(nearL, groundY); ctx.lineTo(nearR, groundY);
         ctx.lineTo(farR, farY); ctx.lineTo(farL, farY); ctx.closePath(); ctx.fill();
-
-        const wet = ctx.createLinearGradient(VPx, farY, VPx, groundY);
-        wet.addColorStop(0, `rgba(63,154,166,${0.1 * flick})`); wet.addColorStop(1, 'rgba(63,154,166,0)');
-        ctx.fillStyle = wet;
-        ctx.beginPath();
-        ctx.moveTo(VPx - w * 0.015, farY); ctx.lineTo(VPx + w * 0.015, farY);
-        ctx.lineTo(VPx + w * 0.1, groundY); ctx.lineTo(VPx - w * 0.1, groundY); ctx.closePath(); ctx.fill();
-
-        ctx.strokeStyle = 'rgba(63,154,166,0.1)'; ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(nearL, groundY); ctx.lineTo(farL, farY);
-        ctx.moveTo(nearR, groundY); ctx.lineTo(farR, farY); ctx.stroke();
-
-        const curbY = h * 0.7;
-        ctx.fillStyle = 'rgba(2,8,9,0.9)'; ctx.fillRect(w * 0.08, curbY, w * 0.5, h * 0.03);
-        ctx.fillStyle = 'rgba(63,154,166,0.12)'; ctx.fillRect(w * 0.08, curbY, w * 0.5, 2);
-
-        const lampX = w * 0.2, lampTop = h * 0.18;
-        ctx.strokeStyle = 'rgba(63,154,166,0.3)'; ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(lampX, curbY); ctx.lineTo(lampX, lampTop); ctx.lineTo(lampX + w * 0.05, lampTop); ctx.stroke();
+        const lampX = w * 0.2, lampTop = h * 0.18, curbY = h * 0.7;
         const lg = ctx.createRadialGradient(lampX + w * 0.05, lampTop, 0, lampX + w * 0.05, lampTop, w * 0.04);
         lg.addColorStop(0, `rgba(150,230,235,${0.5 * flick})`); lg.addColorStop(1, 'rgba(150,230,235,0)');
         ctx.fillStyle = lg; ctx.fillRect(0, 0, w, h);
-        const pool = ctx.createRadialGradient(lampX + w * 0.05, h * 0.84, 0, lampX + w * 0.05, h * 0.84, w * 0.16);
-        pool.addColorStop(0, `rgba(63,154,166,${0.1 * flick})`); pool.addColorStop(1, 'rgba(63,154,166,0)');
-        ctx.fillStyle = pool;
-        ctx.beginPath(); ctx.ellipse(lampX + w * 0.05, h * 0.84, w * 0.16, h * 0.05, 0, 0, Math.PI * 2); ctx.fill();
-
         const drive = easeOutCubic(clamp(sp / 0.82));
-        const xStart = w * 1.25, xStop = w * 0.4;
-        const carX = lerp(xStart, xStop, drive);
-        const dist = (xStart - carX) / (h * 0.05);
+        const carX = lerp(w * 1.25, w * 0.4, drive);
+        const dist = (w * 1.25 - carX) / (h * 0.05);
         const light = 1 - smooth(0.8, 1, sp);
-        const brake = smooth(0.55, 0.82, sp) * (1 - smooth(0.9, 1, sp));
-        drawCar(carX, h * 0.82, lerp(1.05, 0.92, drive), -dist, light, brake);
-
-        const fog = ctx.createLinearGradient(0, VPy, 0, h * 0.75);
-        const fa = 0.05 + Math.sin(time * 0.0008) * 0.02;
-        fog.addColorStop(0, `rgba(63,154,166,${Math.max(0, fa)})`); fog.addColorStop(1, 'rgba(63,154,166,0)');
-        ctx.fillStyle = fog; ctx.fillRect(0, VPy, w, h * 0.4);
-
+        drawCar(carX, h * 0.82, lerp(1.05, 0.92, drive), -dist, light, 0);
         const vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.25, w / 2, h / 2, h * 0.85);
         vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.75)');
         ctx.fillStyle = vig; ctx.fillRect(0, 0, w, h);
       }
-
       window.addEventListener('resize', resize);
       resize();
-
+      // titolo poi scena in loop (ping-pong)
+      wait(TITLE_MS).then(() => { setTitle(0); setBlack(0); lockScroll(false); });
       let raf = 0;
       function loop() {
-        const p = progressNow();
-        draw(sceneProgress(p), performance.now());
-        updateOverlays(p);
+        const t = performance.now();
+        const cyc = (t / 9000) % 2;
+        draw(cyc < 1 ? cyc : 2 - cyc, t);
         raf = requestAnimationFrame(loop);
       }
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) cancelAnimationFrame(raf);
-        else if (!reduce) loop();
+        else loop();
       });
-
-      if (reduce) { draw(0.62, 0); updateOverlays(0); }
-      else loop();
+      loop();
     }
-
-    if (video) setupVideo(video);
-    else if (canvas) setupCanvas(canvas);
   }
 </script>
