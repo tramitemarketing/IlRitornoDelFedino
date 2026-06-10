@@ -9,13 +9,13 @@ import {
 } from '../lib/spotify';
 
 const { podcast } = siteConfig;
-const previewMode = !podcast.showEpisodes;
+const layout = podcast.layout;
 
-// 1) prova il recupero automatico via API (se autoFetch e credenziali)
+// 1) griglia via API solo in layout 'grid'
 let episodes: Episode[] = [];
 let status: FetchStatus = 'empty';
 let detail = '';
-if (!previewMode && podcast.autoFetch) {
+if (layout === 'grid' && podcast.autoFetch) {
   const res = await getShowEpisodes(podcast.showId, podcast.market, podcast.maxEpisodes);
   episodes = res.episodes;
   status = res.status;
@@ -38,8 +38,8 @@ const diagMessage = diagMap[status]
   ? diagMap[status] + (detail ? ` [${detail}]` : '')
   : '';
 
-// 2) fallback: episodi inseriti a mano nel config
-if (!previewMode && episodes.length === 0 && podcast.episodes.length > 0) {
+// 2) fallback: episodi inseriti a mano nel config (solo layout 'grid')
+if (layout === 'grid' && episodes.length === 0 && podcast.episodes.length > 0) {
   episodes = podcast.episodes.map((e) => ({
     id: e.id,
     name: e.title ?? 'Episodio',
@@ -51,9 +51,12 @@ if (!previewMode && episodes.length === 0 && podcast.episodes.length > 0) {
   }));
 }
 
-// 3) ultimo fallback: nessun dato -> player unico dello show
-const hasGrid = !previewMode && episodes.length > 0;
-const hasShow = !previewMode && podcast.showId.trim() !== '';
+const hasShow = podcast.showId.trim() !== '';
+// griglia di card (layout grid con episodi); altrimenti player unico (layout show)
+const showGrid = layout === 'grid' && episodes.length > 0;
+const showPlayer = layout === 'show' && hasShow;
+// in layout grid, se la griglia è vuota ricade sul player unico
+const showFallbackPlayer = layout === 'grid' && !showGrid && hasShow;
 ---
 
 <section class="podcast section" id="podcast">
@@ -70,7 +73,7 @@ const hasShow = !previewMode && podcast.showId.trim() !== '';
       </a>
     </header>
 
-    {hasGrid && (
+    {showGrid && (
       <ul class="podcast__grid" role="list">
         {episodes.map((ep) => (
           <li class="ep reveal" data-ep-id={ep.id}>
@@ -95,18 +98,18 @@ const hasShow = !previewMode && podcast.showId.trim() !== '';
       </ul>
     )}
 
-    {!hasGrid && hasShow && (
+    {(showPlayer || showFallbackPlayer) && (
       <div class="podcast__player reveal">
         <iframe
           title={`Podcast ${podcast.name}`}
           src={`https://open.spotify.com/embed/show/${podcast.showId}?theme=0`}
           width="100%"
-          height="500"
+          height="600"
           style="border:0"
           allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
           loading="lazy"
         ></iframe>
-        {diagMessage && (
+        {showFallbackPlayer && diagMessage && (
           <p class="podcast__diag" data-status={status}>⚠️ {diagMessage}</p>
         )}
       </div>
