@@ -81,14 +81,19 @@ export const siteConfig = {
     name: 'Dalla parte sbagliata della strada',
     /** Sottotitolo / claim della sezione ('' per nasconderlo) */
     subtitle: '',
+    /** Testo introduttivo mostrato tra il bottone Spotify e il player */
+    intro: [
+      "Ci sono strade che non si incrociano sotto la luce del sole, ma nei vicoli ciechi dove il fumo delle sigarette si confonde con la nebbia del crepuscolo. È lì, dalla parte sbagliata della strada, che si muove l'esistenza di Iacopo Fedi. Un'anima divisa tra il rigore della speculazione filosofica e il richiamo sulfureo del blues, un cammino notturno dove ogni passo risuona come un accordo minore su una chitarra consumata dal fango e dal tempo.",
+      "Nato con il blues nel sangue – nato blues dappertutto – Iacopo ha trasformato la sua vita in un'evocazione continua, muovendosi costantemente nell'ombra dei grandi miti della musica del diavolo e della crisi del pensiero moderno.",
+    ],
     /**
      * Layout della sezione episodi:
-     *  - 'show'    → player ufficiale Spotify dello show (tutti gli episodi
-     *               in ordine, funziona senza credenziali). CONSIGLIATO.
-     *  - 'grid'    → griglia di card via API (richiede SPOTIFY_REFRESH_TOKEN).
+     *  - 'grid'    → griglia di card che aprono Spotify (via API, richiede
+     *               SPOTIFY_REFRESH_TOKEN). CONSIGLIATO.
+     *  - 'show'    → player ufficiale Spotify dello show (senza credenziali).
      *  - 'preview' → solo titolo + bottone "Segui su Spotify".
      */
-    layout: 'show' as 'show' | 'grid' | 'preview',
+    layout: 'grid' as 'show' | 'grid' | 'preview',
     /**
      * ID dello SHOW Spotify.
      * Lo trovi nell'URL: open.spotify.com/show/XXXXXXXX
@@ -121,11 +126,6 @@ export const siteConfig = {
   bio: {
     eyebrow: 'Il professore',
     name: 'Iacopo Fedi',
-    /** Paragrafi introduttivi (lead) */
-    lead: [
-      "Ci sono strade che non si incrociano sotto la luce del sole, ma nei vicoli ciechi dove il fumo delle sigarette si confonde con la nebbia del crepuscolo. È lì, dalla parte sbagliata della strada, che si muove l'esistenza di Iacopo Fedi. Un'anima divisa tra il rigore della speculazione filosofica e il richiamo sulfureo del blues, un cammino notturno dove ogni passo risuona come un accordo minore su una chitarra consumata dal fango e dal tempo.",
-      "Nato con il blues nel sangue – nato blues dappertutto – Iacopo ha trasformato la sua vita in un'evocazione continua, muovendosi costantemente nell'ombra dei grandi miti della musica del diavolo e della crisi del pensiero moderno.",
-    ],
     sections: [
       {
         heading: "L'Angelo delle Macerie e il Silenzio di Roma",

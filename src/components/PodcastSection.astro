@@ -8,7 +8,7 @@ import {
   type FetchStatus,
 } from '../lib/spotify';
 
-const { podcast } = siteConfig;
+const { podcast, contact } = siteConfig;
 const layout = podcast.layout;
 
 // 1) griglia via API solo in layout 'grid'
@@ -73,11 +73,23 @@ const showFallbackPlayer = layout === 'grid' && !showGrid && hasShow;
       </a>
     </header>
 
+    {podcast.intro.length > 0 && (
+      <div class="podcast__intro reveal">
+        {podcast.intro.map((p) => <p>{p}</p>)}
+      </div>
+    )}
+
     {showGrid && (
       <ul class="podcast__grid" role="list">
         {episodes.map((ep) => (
-          <li class="ep reveal" data-ep-id={ep.id}>
-            <button class="ep__media" type="button" aria-label={`Riproduci: ${ep.name}`}>
+          <li class="ep reveal">
+            <a
+              class="ep__media"
+              href={ep.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Ascolta su Spotify: ${ep.name}`}
+            >
               {ep.image ? (
                 <img class="ep__cover" src={ep.image} alt="" loading="lazy" decoding="async" />
               ) : (
@@ -86,7 +98,7 @@ const showFallbackPlayer = layout === 'grid' && !showGrid && hasShow;
               <span class="ep__play" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
               </span>
-            </button>
+            </a>
             <div class="ep__body">
               <h3 class="ep__title">{ep.name}</h3>
               <p class="ep__meta">
@@ -114,32 +126,19 @@ const showFallbackPlayer = layout === 'grid' && !showGrid && hasShow;
         )}
       </div>
     )}
+
+    {contact.youtube && (
+      <div class="podcast__yt reveal">
+        <a class="podcast__follow podcast__follow--yt" href={contact.youtube} target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor">
+            <path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 00.5 6.2 31 31 0 000 12a31 31 0 00.5 5.8 3 3 0 002.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 002.1-2.1A31 31 0 0024 12a31 31 0 00-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/>
+          </svg>
+          Guarda su YouTube
+        </a>
+      </div>
+    )}
   </div>
 </section>
-
-<script>
-  // Caricamento "on click": l'iframe Spotify viene creato solo quando
-  // l'utente vuole ascoltare -> griglia leggera anche con molti episodi.
-  document.querySelectorAll<HTMLElement>('.ep').forEach((card) => {
-    const btn = card.querySelector<HTMLButtonElement>('.ep__media');
-    const id = card.dataset.epId;
-    if (!btn || !id) return;
-    btn.addEventListener('click', () => {
-      const frame = document.createElement('iframe');
-      frame.src = `https://open.spotify.com/embed/episode/${id}?theme=0`;
-      frame.width = '100%';
-      frame.height = '152';
-      frame.style.border = '0';
-      frame.loading = 'lazy';
-      frame.title = card.querySelector('.ep__title')?.textContent ?? 'Episodio';
-      frame.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
-      const wrap = document.createElement('div');
-      wrap.className = 'ep__frame';
-      wrap.appendChild(frame);
-      btn.replaceWith(wrap);
-    }, { once: true });
-  });
-</script>
 
 <style>
   .podcast {
@@ -178,6 +177,42 @@ const showFallbackPlayer = layout === 'grid' && !showGrid && hasShow;
   .podcast__follow:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 30px rgba(30, 215, 96, 0.25);
+  }
+  .podcast__follow--yt {
+    color: #fff;
+    background: #ff0000;
+  }
+  .podcast__follow--yt:hover {
+    box-shadow: 0 10px 30px rgba(255, 0, 0, 0.3);
+  }
+
+  /* Testo introduttivo (incipit della bio) */
+  .podcast__intro {
+    max-width: 44rem;
+    margin: 0 auto clamp(2.5rem, 6vw, 3.5rem);
+    text-align: center;
+  }
+  .podcast__intro p {
+    color: var(--text-muted);
+    font-size: clamp(1.05rem, 2.3vw, 1.25rem);
+    line-height: 1.75;
+    margin-bottom: 1.1rem;
+    font-style: italic;
+  }
+  .podcast__intro p:first-child::first-letter {
+    font-family: var(--font-display);
+    font-size: 3.2em;
+    float: left;
+    line-height: 0.8;
+    padding: 0.06em 0.12em 0 0;
+    color: var(--ember);
+    font-style: normal;
+  }
+
+  /* Bottone YouTube sotto il player */
+  .podcast__yt {
+    text-align: center;
+    margin-top: clamp(1.5rem, 4vw, 2.2rem);
   }
 
   /* Griglia responsive (1 col mobile -> auto) */
