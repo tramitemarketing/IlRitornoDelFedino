@@ -294,6 +294,23 @@ export async function getEpisodesFromEmbed(showId: string, limit = 50): Promise<
   }
 }
 
+/**
+ * oEmbed pubblico di Spotify (nessuna credenziale): da un link episodio
+ * ricava titolo e copertina. Usato per arricchire gli episodi manuali.
+ */
+export async function getEpisodeOEmbed(
+  epUrl: string,
+): Promise<{ title?: string; image?: string }> {
+  try {
+    const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(epUrl)}`);
+    if (!r.ok) return {};
+    const d = await r.json();
+    return { title: d.title, image: d.thumbnail_url };
+  } catch {
+    return {};
+  }
+}
+
 /** Formatta una durata in ms come "12 min" o "1 h 03 min". */
 export function formatDuration(ms: number): string {
   const totalMin = Math.round(ms / 60000);
