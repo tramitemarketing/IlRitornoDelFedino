@@ -17,6 +17,12 @@ const socials = [
       <h2 class="bio__name gradient-text">{bio.name}</h2>
     </header>
 
+    {bio.intro.length > 0 && (
+      <div class="bio__lead reveal">
+        {bio.intro.map((p) => <p>{p}</p>)}
+      </div>
+    )}
+
     <div class="bio__body">
       {bio.sections.map((sec) => (
         <article class="chapter reveal">

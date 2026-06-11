@@ -78,7 +78,7 @@ export const siteConfig = {
     /** Etichetta sopra il titolo ('' per nasconderla) */
     eyebrow: '',
     /** Titolo della sezione */
-    name: 'Dalla parte sbagliata della strada',
+    name: 'La parte sbagliata della strada',
     /** Sottotitolo / claim della sezione ('' per nasconderlo) */
     subtitle: '',
     /** Testo introduttivo mostrato tra il bottone Spotify e il player */
@@ -88,12 +88,17 @@ export const siteConfig = {
     ],
     /**
      * Layout della sezione episodi:
-     *  - 'grid'    → griglia di card che aprono Spotify (via API, richiede
-     *               SPOTIFY_REFRESH_TOKEN). CONSIGLIATO.
-     *  - 'show'    → player ufficiale Spotify dello show (senza credenziali).
+     *  - 'link'    → solo bottoni: "Approfondisci la storia" + "Ascolta su
+     *               Spotify" (primo episodio) + YouTube. ATTUALE.
+     *  - 'grid'    → griglia di card che aprono Spotify (via API/link).
+     *  - 'show'    → player ufficiale Spotify dello show.
      *  - 'preview' → solo titolo + bottone "Segui su Spotify".
      */
-    layout: 'grid' as 'show' | 'grid' | 'preview',
+    layout: 'link' as 'link' | 'show' | 'grid' | 'preview',
+    /** Link al primo episodio (bottone "Ascolta su Spotify") */
+    episodeUrl: 'https://open.spotify.com/episode/4VpuNyovwrGMA8BRmHBTSD',
+    /** Etichetta del bottone che porta alla bio completa */
+    storyButton: 'Approfondisci la storia',
     /**
      * ID dello SHOW Spotify.
      * Lo trovi nell'URL: open.spotify.com/show/XXXXXXXX
@@ -126,6 +131,11 @@ export const siteConfig = {
   bio: {
     eyebrow: 'Il professore',
     name: 'Iacopo Fedi',
+    /** Bio fattuale mostrata sotto il nome */
+    intro: [
+      "Iacopo Fedi è un professore di Storia/Filosofia e musicista, nato ad Ascoli Piceno (Marche, Italia) il 19/08/1987. All'età di circa quindici anni, l'incontro fulminante con il blues insieme a Elio segna l'inizio di un percorso artistico ed esistenziale profondo. Da quel momento la musica diventa una vocazione assoluta, una dimensione per cui spendersi interamente.",
+      "Parallelamente all'attività musicale, la sua ricerca si sviluppa attraverso una densa riflessione filosofica e politica. Al centro della sua indagine si collocano la complessa dialettica tra il bene e il male, l'analisi profonda del concetto di unione e l'esame critico delle dinamiche che muovono la moderna democrazia contemporanea. In questo quadro intellettuale, il dialogo si estende inevitabilmente all'evoluzione delle macchine e all'impatto socioculturale della musica stessa.",
+    ],
     sections: [
       {
         heading: "L'Angelo delle Macerie e il Silenzio di Roma",

@@ -39,13 +39,12 @@ const hasVideo = intro.videoSrc.trim() !== '';
     {intro.titleSub && <p class="intro__sub">{intro.titleSub}</p>}
   </div>
 
-  <!-- Indicatore "scorri" (dalla 2a visione, sullo schermo nero) -->
-  <div class="intro__scroll" id="intro-scroll" aria-hidden="true" hidden>
-    <span>scorri</span>
-    <div class="intro__scroll-line"></div>
-  </div>
+  <!-- Tasto play (visioni successive + fallback autoplay) -->
+  <button class="intro__play" id="intro-play" type="button" aria-label="Riproduci" hidden>
+    <svg viewBox="0 0 24 24" width="34" height="34" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+  </button>
 
-  <!-- Tasto audio (default OFF) -->
+  <!-- Tasto audio -->
   <button class="intro__audio" id="intro-audio" type="button" aria-pressed="false" aria-label="Attiva audio" hidden>
     <svg class="ico ico--off" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
       <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3l2.5 2.5-1.5 1.5L15 13.5 12.5 16 11 14.5 13.5 12 11 9.5 12.5 8 15 10.5 17.5 8 19 9.5 16.5 12z"/>
@@ -149,56 +148,53 @@ const hasVideo = intro.videoSrc.trim() !== '';
   .intro__audio[aria-pressed='true'] .ico--off { display: none; }
   .intro__audio[aria-pressed='true'] .ico--on { display: block; }
 
-  /* Indicatore "scorri" (dalla 2a visione) */
-  .intro__scroll {
+  /* Tasto play (visioni successive) */
+  .intro__play {
     position: absolute;
-    bottom: 1.8rem;
-    left: 50%;
-    transform: translateX(-50%);
+    inset: 0;
+    margin: auto;
     z-index: 4;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--text-muted);
-    font-family: var(--font-display);
-    font-size: 0.7rem;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    pointer-events: none;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    border: 1px solid rgba(211, 154, 58, 0.55);
+    color: var(--text);
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(6px);
+    display: grid;
+    place-items: center;
+    padding-left: 6px;
+    transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease), border-color 0.3s var(--ease);
   }
-  .intro__scroll-line {
-    width: 1px;
-    height: 40px;
-    background: linear-gradient(var(--teal-bright), transparent);
-    animation: scrollpulse 1.8s var(--ease) infinite;
-    transform-origin: top;
-  }
-  @keyframes scrollpulse {
-    0% { transform: scaleY(0); opacity: 0; }
-    40% { transform: scaleY(1); opacity: 1; }
-    100% { transform: scaleY(1) translateY(18px); opacity: 0; }
+  .intro__play:hover {
+    transform: scale(1.08);
+    border-color: var(--ember);
+    box-shadow: var(--glow);
   }
 </style>
 
 <script>
   // ===========================================================
-  // HOME — Intro AUTOPLAY: schermo nero col titolo -> video
-  // (parte da solo) -> dissolvenza al nero -> contenuti.
-  // 1a visita: scroll bloccato finché il video non finisce.
-  // Riparte tornando in cima (con indicatore "scorri", non bloccato).
-  // Tasto audio (default off). Nessun tasto "salta".
+  // HOME — Intro: schermo nero col titolo (3s) -> video.
+  // 1a visita: autostart MUTO (regole browser) + tasto audio,
+  // scroll bloccato fino a fine video -> va alla sezione podcast.
+  // Visioni successive: tasto play (audio acceso al clic).
+  // Reload: sempre in cima.
   // ===========================================================
   const section = document.querySelector<HTMLElement>('.intro');
   const black = document.getElementById('intro-black');
   const title = document.getElementById('intro-title');
-  const scrollInd = document.getElementById('intro-scroll');
+  const playBtn = document.getElementById('intro-play') as HTMLButtonElement | null;
   const audioBtn = document.getElementById('intro-audio') as HTMLButtonElement | null;
   const video = document.getElementById('intro-video') as HTMLVideoElement | null;
   const canvas = document.getElementById('alley-canvas') as HTMLCanvasElement | null;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const TITLE_MS = 1300;     // durata schermata nera col titolo
+  // Al reload riparti sempre dall'alto
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.scrollTo(0, 0);
+
+  const TITLE_MS = 3000;     // schermata nera col titolo prima dell'autostart
   const END_FADE_S = 0.8;    // secondi finali di dissolvenza al nero
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -219,6 +215,13 @@ const hasVideo = intro.videoSrc.trim() !== '';
       document.body.style.overflow = v;
     }
 
+    function syncAudioBtn() {
+      if (!video || !audioBtn) return;
+      const on = !video.muted;
+      audioBtn.setAttribute('aria-pressed', String(on));
+      audioBtn.setAttribute('aria-label', on ? 'Disattiva audio' : 'Attiva audio');
+    }
+
     function finish() {
       token++;                 // invalida eventuali sequenze in sospeso
       running = false;
@@ -226,7 +229,7 @@ const hasVideo = intro.videoSrc.trim() !== '';
       faded = true;
       setTitle(0);
       setBlack(1);
-      show(scrollInd, false);
+      show(playBtn, false);
       show(audioBtn, false);
       lockScroll(false);
       if (video) try { video.pause(); } catch {}
@@ -236,38 +239,50 @@ const hasVideo = intro.videoSrc.trim() !== '';
       lockedRun = false;
     }
 
-    async function run(lock: boolean) {
+    // Avvia la riproduzione (con o senza audio) rivelando il video
+    async function startPlayback(withAudio: boolean) {
+      setTitle(0);
+      setBlack(0);
+      show(playBtn, false);
+      show(audioBtn, true);
+      if (!video) return;
+      video.muted = !withAudio;
+      syncAudioBtn();
+      try {
+        await video.play();
+      } catch {
+        // riproduzione rifiutata: mostra il tasto play e sblocca
+        video.muted = true;
+        syncAudioBtn();
+        show(playBtn, true);
+        if (lockedRun) lockScroll(false);
+      }
+    }
+
+    // lock = blocca lo scroll; autostart = parte da solo (muto) dopo i 3s,
+    // altrimenti mostra il tasto play (visioni successive, audio al clic).
+    async function run(opts: { lock: boolean; autostart: boolean }) {
       if (running) return;
       running = true;
-      lockedRun = lock;
+      lockedRun = opts.lock;
       completed = false;
       faded = false;
       const my = ++token;
 
       setBlack(1);
       setTitle(1);
-      // Indicatore "scorri": solo dalla 2a visione (replay), sullo schermo nero
-      show(scrollInd, !lock);
-      if (lock) lockScroll(true);
-      if (video) {
-        try { video.pause(); video.currentTime = 0; } catch {}
-      }
+      show(playBtn, false);
+      show(audioBtn, false);
+      if (opts.lock) lockScroll(true);
+      if (video) { try { video.pause(); video.currentTime = 0; } catch {} }
 
-      await wait(TITLE_MS);
-      if (my !== token) return; // sostituita/annullata
-
-      setTitle(0);
-      setBlack(0);
-      show(scrollInd, false); // via dallo schermo nero
-
-      if (video) {
-        show(audioBtn, true);
-        try {
-          await video.play();
-        } catch {
-          // autoplay bloccato: sblocca lo scroll per non restare fermi
-          if (my === token && lock) lockScroll(false);
-        }
+      if (opts.autostart) {
+        await wait(TITLE_MS);
+        if (my !== token) return;
+        startPlayback(false); // autostart muto (regole browser)
+      } else {
+        // visione successiva: tasto play sullo schermo nero (audio al clic)
+        show(playBtn, true);
       }
     }
 
@@ -283,37 +298,37 @@ const hasVideo = intro.videoSrc.trim() !== '';
       video.addEventListener('ended', finish);
     }
 
-    // Tasto audio (default OFF / muto)
+    // Tasto play: avvia con audio acceso (è un clic dell'utente)
+    playBtn?.addEventListener('click', () => startPlayback(true));
+
+    // Tasto audio: attiva/disattiva il sonoro
     audioBtn?.addEventListener('click', () => {
       if (!video) return;
       video.muted = !video.muted;
-      const on = !video.muted;
-      audioBtn.setAttribute('aria-pressed', String(on));
-      audioBtn.setAttribute('aria-label', on ? 'Disattiva audio' : 'Attiva audio');
+      syncAudioBtn();
     });
 
-    // --- Riparte tornando in cima ---
+    // --- Riparte tornando in cima (con tasto play, non in automatico) ---
     const io = new IntersectionObserver(
       (entries) => {
         const e = entries[0];
         if (e.isIntersecting && e.intersectionRatio >= 0.9 && completed && !running) {
-          run(false); // replay senza ribloccare lo scroll
+          run({ lock: false, autostart: false });
         }
       },
       { threshold: [0, 0.9, 1] },
     );
     io.observe(section);
 
-    // --- Avvio ---
+    // --- Avvio (prima visita: autostart muto dopo 3s, scroll bloccato) ---
     if (reduce) {
-      // Niente autoplay: mostra il primo fotogramma, nessun blocco
       setBlack(0);
       setTitle(0);
+      show(playBtn, true);
       lockScroll(false);
     } else if (video) {
-      run(true);
+      run({ lock: true, autostart: true });
     } else if (canvas) {
-      // Fallback vettoriale: titolo poi scena in loop (no gate)
       setupCanvas(canvas);
     }
 
