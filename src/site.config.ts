@@ -200,12 +200,10 @@ export const siteConfig = {
     linkedin: '',
   },
 
-  /** Credito nel footer */
+  /** Credito nel footer (uguale a SOGLIA / immaginare.org) */
   madeBy: {
     label: 'Made by Tramite',
-    url: 'https://www.instagram.com/tramite.marketing/',
-    /** Logo: metti un file in /public (es. '/tramite.svg') o '' per il segno di default */
-    logo: '',
+    url: 'https://tramite-marketing.pages.dev',
   },
 };
 
