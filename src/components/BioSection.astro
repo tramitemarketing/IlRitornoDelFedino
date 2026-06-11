@@ -23,7 +23,7 @@ const socials = [
       </div>
     )}
 
-    <div class="bio__body">
+    <div class="bio__body" id="storia">
       {bio.sections.map((sec) => (
         <article class="chapter reveal">
           <h3 class="chapter__title">{sec.heading}</h3>
@@ -100,11 +100,18 @@ const socials = [
 
   .bio__body {
     max-width: 44rem;
-    margin: 0 auto;
+    margin: clamp(2.5rem, 7vw, 5rem) auto 0;
+    padding-top: clamp(1.5rem, 4vw, 2.5rem);
+    border-top: 1px solid rgba(211, 154, 58, 0.18);
+    scroll-margin-top: 2rem;
   }
   .chapter {
     padding-block: clamp(1.6rem, 4vw, 2.4rem);
     border-top: 1px solid rgba(63, 154, 166, 0.12);
+  }
+  .bio__body > .chapter:first-child {
+    border-top: none;
+    padding-top: 0;
   }
   .chapter__title {
     font-family: var(--font-display);

@@ -148,24 +148,25 @@ const hasVideo = intro.videoSrc.trim() !== '';
   .intro__audio[aria-pressed='true'] .ico--off { display: none; }
   .intro__audio[aria-pressed='true'] .ico--on { display: block; }
 
-  /* Tasto play (visioni successive) */
+  /* Tasto play (solo visioni successive, discreto) */
   .intro__play {
     position: absolute;
     inset: 0;
     margin: auto;
     z-index: 4;
-    width: 88px;
-    height: 88px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
-    border: 1px solid rgba(211, 154, 58, 0.55);
+    border: 1px solid rgba(211, 154, 58, 0.5);
     color: var(--text);
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(6px);
     display: grid;
     place-items: center;
-    padding-left: 6px;
+    padding-left: 4px;
     transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease), border-color 0.3s var(--ease);
   }
+  .intro__play svg { width: 24px; height: 24px; }
   .intro__play:hover {
     transform: scale(1.08);
     border-color: var(--ember);
@@ -251,11 +252,16 @@ const hasVideo = intro.videoSrc.trim() !== '';
       try {
         await video.play();
       } catch {
-        // riproduzione rifiutata: mostra il tasto play e sblocca
+        // riproduzione rifiutata
         video.muted = true;
         syncAudioBtn();
-        show(playBtn, true);
-        if (lockedRun) lockScroll(false);
+        if (lockedRun) {
+          // prima visita: nessun tasto play, sblocca soltanto
+          lockScroll(false);
+        } else {
+          // visione successiva: riproponi il tasto play
+          show(playBtn, true);
+        }
       }
     }
 

@@ -62,6 +62,7 @@ if (layout === 'grid' && episodes.length === 0 && podcast.episodes.length > 0) {
 
 const hasShow = podcast.showId.trim() !== '';
 const isLink = layout === 'link';
+const episodeId = podcast.episodeUrl.match(/episode\/([A-Za-z0-9]+)/)?.[1] ?? '';
 const showGrid = layout === 'grid' && episodes.length > 0;
 const showPlayer = layout === 'show' && hasShow;
 // layout 'grid' senza episodi: stato vuoto pulito (niente player di ripiego)
@@ -74,14 +75,17 @@ const noEpisodes = layout === 'grid' && episodes.length === 0;
       {podcast.eyebrow && <p class="eyebrow">{podcast.eyebrow}</p>}
       <h2 class="podcast__title gradient-text">{podcast.name}</h2>
       {podcast.subtitle && <p class="podcast__subtitle">{podcast.subtitle}</p>}
-      {!isLink && (
-        <a class="podcast__follow" href={podcast.spotifyUrl} target="_blank" rel="noopener noreferrer">
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">
-            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.5 17.3a.75.75 0 01-1.03.25c-2.82-1.72-6.37-2.11-10.55-1.16a.75.75 0 11-.33-1.46c4.57-1.04 8.5-.59 11.66 1.34.35.22.46.68.25 1.03zm1.47-3.27a.94.94 0 01-1.29.31c-3.23-1.98-8.15-2.56-11.97-1.4a.94.94 0 11-.54-1.8c4.37-1.32 9.79-.68 13.5 1.6.44.27.58.85.3 1.29zm.13-3.4C15.33 8.3 8.9 8.08 5.2 9.2a1.12 1.12 0 11-.65-2.15c4.25-1.29 11.35-1.04 15.83 1.62a1.12 1.12 0 11-1.15 1.93z"/>
-          </svg>
-          Segui su Spotify
-        </a>
-      )}
+      <a
+        class="podcast__follow"
+        href={isLink ? podcast.episodeUrl : podcast.spotifyUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">
+          <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.5 17.3a.75.75 0 01-1.03.25c-2.82-1.72-6.37-2.11-10.55-1.16a.75.75 0 11-.33-1.46c4.57-1.04 8.5-.59 11.66 1.34.35.22.46.68.25 1.03zm1.47-3.27a.94.94 0 01-1.29.31c-3.23-1.98-8.15-2.56-11.97-1.4a.94.94 0 11-.54-1.8c4.37-1.32 9.79-.68 13.5 1.6.44.27.58.85.3 1.29zm.13-3.4C15.33 8.3 8.9 8.08 5.2 9.2a1.12 1.12 0 11-.65-2.15c4.25-1.29 11.35-1.04 15.83 1.62a1.12 1.12 0 11-1.15 1.93z"/>
+        </svg>
+        {isLink ? 'Ascolta su Spotify' : 'Segui su Spotify'}
+      </a>
     </header>
 
     {podcast.intro.length > 0 && (
@@ -92,28 +96,26 @@ const noEpisodes = layout === 'grid' && episodes.length === 0;
 
     {isLink && (
       <div class="podcast__cta reveal">
-        <a class="btn-ghost" href="#bio">
+        <a class="btn-ghost" href="#storia">
           {podcast.storyButton}
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </a>
-        <div class="podcast__actions">
-          <a class="podcast__follow" href={podcast.episodeUrl} target="_blank" rel="noopener noreferrer">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">
-              <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.5 17.3a.75.75 0 01-1.03.25c-2.82-1.72-6.37-2.11-10.55-1.16a.75.75 0 11-.33-1.46c4.57-1.04 8.5-.59 11.66 1.34.35.22.46.68.25 1.03zm1.47-3.27a.94.94 0 01-1.29.31c-3.23-1.98-8.15-2.56-11.97-1.4a.94.94 0 11-.54-1.8c4.37-1.32 9.79-.68 13.5 1.6.44.27.58.85.3 1.29zm.13-3.4C15.33 8.3 8.9 8.08 5.2 9.2a1.12 1.12 0 11-.65-2.15c4.25-1.29 11.35-1.04 15.83 1.62a1.12 1.12 0 11-1.15 1.93z"/>
-            </svg>
-            Ascolta su Spotify
-          </a>
-          {contact.youtube && (
-            <a class="podcast__follow podcast__follow--yt" href={contact.youtube} target="_blank" rel="noopener noreferrer">
-              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor">
-                <path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 00.5 6.2 31 31 0 000 12a31 31 0 00.5 5.8 3 3 0 002.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 002.1-2.1A31 31 0 0024 12a31 31 0 00-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/>
-              </svg>
-              Guarda su YouTube
-            </a>
-          )}
-        </div>
+      </div>
+    )}
+
+    {isLink && episodeId && (
+      <div class="podcast__player reveal">
+        <iframe
+          title={`Episodio: ${podcast.name}`}
+          src={`https://open.spotify.com/embed/episode/${episodeId}?theme=0`}
+          width="100%"
+          height="232"
+          style="border:0"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          loading="lazy"
+        ></iframe>
       </div>
     )}
 
@@ -175,7 +177,7 @@ const noEpisodes = layout === 'grid' && episodes.length === 0;
       </div>
     )}
 
-    {!isLink && contact.youtube && (
+    {contact.youtube && (
       <div class="podcast__yt reveal">
         <a class="podcast__follow podcast__follow--yt" href={contact.youtube} target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor">
