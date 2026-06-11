@@ -200,11 +200,8 @@ const hasVideo = intro.videoSrc.trim() !== '';
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   if (section) {
-    let running = false;
-    let completed = false;
+    let locked = false;   // scroll bloccato (solo prima visione)
     let faded = false;
-    let lockedRun = false;
-    let token = 0;
 
     const setBlack = (a: number) => black && (black.style.opacity = String(a));
     const setTitle = (a: number) => title && (title.style.opacity = String(a));
@@ -223,73 +220,44 @@ const hasVideo = intro.videoSrc.trim() !== '';
       audioBtn.setAttribute('aria-label', on ? 'Disattiva audio' : 'Attiva audio');
     }
 
-    function finish() {
-      token++;                 // invalida eventuali sequenze in sospeso
-      running = false;
-      completed = true;
+    // Stato "schermo nero col titolo + tasto play" (fine video / attesa)
+    function showEndScreen() {
       faded = true;
-      setTitle(0);
       setBlack(1);
-      show(playBtn, false);
+      setTitle(1);
       show(audioBtn, false);
-      lockScroll(false);
+      show(playBtn, true);
       if (video) try { video.pause(); } catch {}
-      if (lockedRun) {
-        document.getElementById('podcast')?.scrollIntoView({ behavior: 'smooth' });
-      }
-      lockedRun = false;
     }
 
-    // Avvia la riproduzione (con o senza audio) rivelando il video
-    async function startPlayback(withAudio: boolean) {
+    // Avvia/riavvia il video dall'inizio rivelando la scena
+    async function startVideo(withAudio: boolean) {
+      faded = false;
+      show(playBtn, false);     // il tasto play scompare
       setTitle(0);
       setBlack(0);
-      show(playBtn, false);
       show(audioBtn, true);
       if (!video) return;
+      try { video.currentTime = 0; } catch {}
       video.muted = !withAudio;
       syncAudioBtn();
       try {
         await video.play();
       } catch {
-        // riproduzione rifiutata
+        // riproduzione rifiutata: torna allo schermo col tasto play
         video.muted = true;
         syncAudioBtn();
-        if (lockedRun) {
-          // prima visita: nessun tasto play, sblocca soltanto
-          lockScroll(false);
-        } else {
-          // visione successiva: riproponi il tasto play
-          show(playBtn, true);
-        }
+        showEndScreen();
       }
     }
 
-    // lock = blocca lo scroll; autostart = parte da solo (muto) dopo i 3s,
-    // altrimenti mostra il tasto play (visioni successive, audio al clic).
-    async function run(opts: { lock: boolean; autostart: boolean }) {
-      if (running) return;
-      running = true;
-      lockedRun = opts.lock;
-      completed = false;
-      faded = false;
-      const my = ++token;
-
-      setBlack(1);
-      setTitle(1);
-      show(playBtn, false);
-      show(audioBtn, false);
-      if (opts.lock) lockScroll(true);
-      if (video) { try { video.pause(); video.currentTime = 0; } catch {} }
-
-      if (opts.autostart) {
-        await wait(TITLE_MS);
-        if (my !== token) return;
-        startPlayback(false); // autostart muto (regole browser)
-      } else {
-        // visione successiva: tasto play sullo schermo nero (audio al clic)
-        show(playBtn, true);
+    function onEnded() {
+      if (locked) {
+        lockScroll(false);
+        locked = false;
+        document.getElementById('podcast')?.scrollIntoView({ behavior: 'smooth' });
       }
+      showEndScreen();          // il tasto play ricompare
     }
 
     // --- Eventi video ---
@@ -301,11 +269,11 @@ const hasVideo = intro.videoSrc.trim() !== '';
           setBlack(1); // dissolvenza al nero (blend col fondo)
         }
       });
-      video.addEventListener('ended', finish);
+      video.addEventListener('ended', onEnded);
     }
 
-    // Tasto play: avvia con audio acceso (è un clic dell'utente)
-    playBtn?.addEventListener('click', () => startPlayback(true));
+    // Tasto play: avvia con audio acceso (clic dell'utente) e si nasconde
+    playBtn?.addEventListener('click', () => startVideo(true));
 
     // Tasto audio: attiva/disattiva il sonoro
     audioBtn?.addEventListener('click', () => {
@@ -314,26 +282,23 @@ const hasVideo = intro.videoSrc.trim() !== '';
       syncAudioBtn();
     });
 
-    // --- Riparte tornando in cima (con tasto play, non in automatico) ---
-    const io = new IntersectionObserver(
-      (entries) => {
-        const e = entries[0];
-        if (e.isIntersecting && e.intersectionRatio >= 0.9 && completed && !running) {
-          run({ lock: false, autostart: false });
-        }
-      },
-      { threshold: [0, 0.9, 1] },
-    );
-    io.observe(section);
+    // --- Avvio: prima visita -> 3s di titolo, poi autostart MUTO, scroll bloccato
+    async function firstVisit() {
+      locked = true;
+      lockScroll(true);
+      setBlack(1);
+      setTitle(1);
+      show(playBtn, false);
+      show(audioBtn, false);
+      if (video) { try { video.pause(); video.currentTime = 0; } catch {} }
+      await wait(TITLE_MS);
+      startVideo(false); // muto (regole browser)
+    }
 
-    // --- Avvio (prima visita: autostart muto dopo 3s, scroll bloccato) ---
     if (reduce) {
-      setBlack(0);
-      setTitle(0);
-      show(playBtn, true);
-      lockScroll(false);
+      showEndScreen();          // nessun autoplay: schermo col tasto play
     } else if (video) {
-      run({ lock: true, autostart: true });
+      firstVisit();
     } else if (canvas) {
       setupCanvas(canvas);
     }
