@@ -199,6 +199,14 @@ export const siteConfig = {
     youtube: 'https://www.youtube.com/user/iacopofedi',
     linkedin: '',
   },
+
+  /** Credito nel footer */
+  madeBy: {
+    label: 'Made by Tramite',
+    url: 'https://www.instagram.com/tramite.marketing/',
+    /** Logo: metti un file in /public (es. '/tramite.svg') o '' per il segno di default */
+    logo: '',
+  },
 };
 
 export type SiteConfig = typeof siteConfig;

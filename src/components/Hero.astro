@@ -39,15 +39,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
     {intro.titleSub && <p class="intro__sub">{intro.titleSub}</p>}
   </div>
 
-  <!-- Tasto audio -->
-  <button class="intro__audio" id="intro-audio" type="button" aria-pressed="false" aria-label="Attiva audio" hidden>
-    <svg class="ico ico--off" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
-      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3l2.5 2.5-1.5 1.5L15 13.5 12.5 16 11 14.5 13.5 12 11 9.5 12.5 8 15 10.5 17.5 8 19 9.5 16.5 12z"/>
-    </svg>
-    <svg class="ico ico--on" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
-      <path d="M3 9v6h4l5 5V4L7 9H3zm13-1.5a5 5 0 010 9V14a3 3 0 000-4.5V7.5zm0-3.5a8.5 8.5 0 010 16.5v-2.1a6.4 6.4 0 000-12.3V4z"/>
-    </svg>
-  </button>
 </section>
 
 <style>
@@ -119,44 +110,17 @@ const hasVideo = intro.videoSrc.trim() !== '';
     text-transform: uppercase;
     font-size: clamp(0.7rem, 2vw, 0.9rem);
   }
-
-  /* Tasto audio (in basso a destra) */
-  .intro__audio {
-    position: absolute;
-    right: 1.3rem;
-    bottom: 1.3rem;
-    z-index: 4;
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(6px);
-    color: var(--text-muted);
-    transition: color 0.3s var(--ease), border-color 0.3s var(--ease);
-  }
-  .intro__audio:hover { color: var(--text); border-color: var(--teal-bright); }
-  .intro__audio .ico--on { display: none; }
-  .intro__audio[aria-pressed='true'] { color: var(--teal-bright); border-color: var(--teal-bright); }
-  .intro__audio[aria-pressed='true'] .ico--off { display: none; }
-  .intro__audio[aria-pressed='true'] .ico--on { display: block; }
-
 </style>
 
 <script>
   // ===========================================================
-  // HOME — Intro: schermo nero col titolo (3s) -> video.
-  // 1a visita: autostart MUTO (regole browser) + tasto audio,
-  // scroll bloccato fino a fine video -> va alla sezione podcast.
-  // Visioni successive: tasto play (audio acceso al clic).
-  // Reload: sempre in cima.
+  // HOME — Intro: schermo nero col titolo (2s) -> video (sempre muto).
+  // 1a visita: autostart, scroll bloccato fino a fine video -> podcast.
+  // Riparte tornando in cima. Reload: sempre in cima.
   // ===========================================================
   const section = document.querySelector<HTMLElement>('.intro');
   const black = document.getElementById('intro-black');
   const title = document.getElementById('intro-title');
-  const audioBtn = document.getElementById('intro-audio') as HTMLButtonElement | null;
   const video = document.getElementById('intro-video') as HTMLVideoElement | null;
   const canvas = document.getElementById('alley-canvas') as HTMLCanvasElement | null;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -186,13 +150,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
       document.body.style.overflow = v;
     }
 
-    function syncAudioBtn() {
-      if (!video || !audioBtn) return;
-      const on = !video.muted;
-      audioBtn.setAttribute('aria-pressed', String(on));
-      audioBtn.setAttribute('aria-label', on ? 'Disattiva audio' : 'Attiva audio');
-    }
-
     function finish() {
       token++;
       running = false;
@@ -200,7 +157,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
       faded = true;
       setTitle(0);
       setBlack(1);
-      show(audioBtn, false);
       lockScroll(false);
       if (video) try { video.pause(); } catch {}
       if (lockedRun) {
@@ -220,7 +176,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
 
       setBlack(1);
       setTitle(1);
-      show(audioBtn, false);
       if (lock) lockScroll(true);
       if (video) { try { video.pause(); video.currentTime = 0; } catch {} }
 
@@ -230,9 +185,7 @@ const hasVideo = intro.videoSrc.trim() !== '';
       setTitle(0);
       setBlack(0);
       if (video) {
-        show(audioBtn, true);
-        video.muted = true;       // audio OFF di default
-        syncAudioBtn();
+        video.muted = true;       // video sempre muto
         try {
           await video.play();
         } catch {
@@ -252,13 +205,6 @@ const hasVideo = intro.videoSrc.trim() !== '';
       });
       video.addEventListener('ended', finish);
     }
-
-    // Tasto audio: attiva/disattiva il sonoro
-    audioBtn?.addEventListener('click', () => {
-      if (!video) return;
-      video.muted = !video.muted;
-      syncAudioBtn();
-    });
 
     // --- Riparte tornando in cima (autostart, senza ribloccare lo scroll) ---
     const io = new IntersectionObserver(
