@@ -1,44 +1,27 @@
 ---
 import { siteConfig } from '../site.config';
 const { intro } = siteConfig;
-const hasVideo = intro.videoSrc.trim() !== '';
 ---
 
 <section class="intro" id="home">
-  {hasVideo ? (
-    <video
-      id="intro-video"
-      class="intro__media"
-      muted
-      playsinline
-      preload="auto"
-      poster={intro.poster || undefined}
-      aria-hidden="true"
-      style={intro.filter ? `filter: ${intro.filter}` : undefined}
-    >
-      {intro.videoWebm && <source src={intro.videoWebm} type="video/webm" />}
-      <source src={intro.videoSrc} type="video/mp4" />
-    </video>
-  ) : (
-    <canvas id="alley-canvas" class="intro__media" aria-hidden="true"></canvas>
-  )}
+  <!-- Auto (render statico, sfumata nel nero) -->
+  <img
+    class="intro__car"
+    src={intro.image}
+    alt=""
+    aria-hidden="true"
+    decoding="async"
+    fetchpriority="high"
+  />
 
-  {hasVideo && intro.gradeColor && (
-    <div
-      class="intro__grade"
-      style={`background:${intro.gradeColor}; opacity:${intro.gradeOpacity}`}
-    ></div>
-  )}
-
-  <!-- Velo nero: schermata iniziale + dissolvenza finale -->
-  <div class="intro__black" id="intro-black"></div>
-
-  <!-- Titolo sullo schermo nero iniziale -->
-  <div class="intro__title" id="intro-title">
+  <!-- Titolo, spostato verso l'alto -->
+  <div class="intro__title">
     <h1 class="intro__name gradient-text">{intro.titleScreen}</h1>
     {intro.titleSub && <p class="intro__sub">{intro.titleSub}</p>}
   </div>
 
+  <!-- Velo nero per la dissolvenza d'ingresso -->
+  <div class="intro__fade" id="intro-fade"></div>
 </section>
 
 <style>
@@ -49,49 +32,56 @@ const hasVideo = intro.videoSrc.trim() !== '';
     overflow: hidden;
     background: #000;
   }
-  .intro__media {
+
+  .intro__car {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
+    left: 50%;
+    top: 58%;
+    transform: translate(-50%, -50%);
+    width: min(94vw, 1080px);
+    max-height: 78vh;
+    object-fit: contain;
+    user-select: none;
+    pointer-events: none;
+    /* Sfuma i bordi dell'auto nel nero dello sfondo */
+    -webkit-mask-image: radial-gradient(
+      72% 70% at 50% 52%,
+      #000 38%,
+      rgba(0, 0, 0, 0.55) 70%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      72% 70% at 50% 52%,
+      #000 38%,
+      rgba(0, 0, 0, 0.55) 70%,
+      transparent 100%
+    );
+    filter: brightness(0.96) contrast(1.04);
   }
 
-  .intro__grade {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    mix-blend-mode: soft-light;
-    pointer-events: none;
-  }
-  .intro__grade::after {
+  /* Alone scuro che chiude l'auto nel fondo */
+  .intro::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(70% 60% at 50% 45%, transparent 40%, rgba(0, 0, 0, 0.6));
-  }
-
-  .intro__black {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    background: #000;
-    opacity: 1; /* parte nero */
-    transition: opacity 0.7s ease;
+    z-index: 1;
     pointer-events: none;
+    background: radial-gradient(
+      80% 75% at 50% 55%,
+      transparent 45%,
+      rgba(0, 0, 0, 0.55) 80%,
+      #000 100%
+    );
   }
 
   .intro__title {
     position: absolute;
-    inset: 0;
-    z-index: 3;
-    display: grid;
-    place-content: center;
+    left: 0;
+    right: 0;
+    top: 16%;
+    z-index: 2;
     text-align: center;
-    padding: 1.5rem;
-    opacity: 1; /* titolo visibile sul nero iniziale */
-    transition: opacity 0.7s ease;
+    padding: 0 1.5rem;
     pointer-events: none;
   }
   .intro__name {
@@ -99,7 +89,7 @@ const hasVideo = intro.videoSrc.trim() !== '';
     font-weight: 700;
     line-height: 0.95;
     letter-spacing: -0.02em;
-    font-size: clamp(2.6rem, 11vw, 8rem);
+    font-size: clamp(2.4rem, 9.5vw, 7rem);
     filter: drop-shadow(0 0 50px rgba(29, 107, 118, 0.35));
   }
   .intro__sub {
@@ -110,247 +100,33 @@ const hasVideo = intro.videoSrc.trim() !== '';
     text-transform: uppercase;
     font-size: clamp(0.7rem, 2vw, 0.9rem);
   }
+
+  /* Velo nero d'ingresso: parte coprente e svanisce */
+  .intro__fade {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    background: #000;
+    opacity: 1;
+    pointer-events: none;
+    animation: intro-fade 1.3s ease forwards;
+  }
+  @keyframes intro-fade {
+    to { opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .intro__fade { animation: none; opacity: 0; }
+  }
+
+  @media (max-width: 560px) {
+    .intro__car { top: 60%; width: 112vw; }
+    .intro__title { top: 13%; }
+  }
 </style>
 
 <script>
-  // ===========================================================
-  // HOME — Intro: schermo nero col titolo (2s) -> video (sempre muto).
-  // 1a visita: autostart, scroll bloccato fino a fine video -> podcast.
-  // Riparte tornando in cima. Reload: sempre in cima.
-  // ===========================================================
-  const section = document.querySelector<HTMLElement>('.intro');
-  const black = document.getElementById('intro-black');
-  const title = document.getElementById('intro-title');
-  const video = document.getElementById('intro-video') as HTMLVideoElement | null;
-  const canvas = document.getElementById('alley-canvas') as HTMLCanvasElement | null;
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
   // Al reload riparti sempre dall'alto
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   window.scrollTo(0, 0);
-
-  const TITLE_MS = 2000;     // schermata nera col titolo prima dell'autostart
-  const END_FADE_S = 0.8;    // secondi finali di dissolvenza al nero
-  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-  if (section) {
-    let running = false;
-    let completed = false;
-    let faded = false;
-    let lockedRun = false;
-    let token = 0;
-
-    const setBlack = (a: number) => black && (black.style.opacity = String(a));
-    const setTitle = (a: number) => title && (title.style.opacity = String(a));
-    const show = (el: HTMLElement | null, on: boolean) => el && (el.hidden = !on);
-
-    function lockScroll(on: boolean) {
-      const v = on ? 'hidden' : '';
-      document.documentElement.style.overflow = v;
-      document.body.style.overflow = v;
-    }
-
-    function finish() {
-      token++;
-      running = false;
-      completed = true;
-      faded = true;
-      setTitle(0);
-      setBlack(1);
-      lockScroll(false);
-      if (video) try { video.pause(); } catch {}
-      if (lockedRun) {
-        document.getElementById('podcast')?.scrollIntoView({ behavior: 'smooth' });
-      }
-      lockedRun = false;
-    }
-
-    // lock = blocca lo scroll (solo prima visione). Audio sempre OFF di default.
-    async function run(lock: boolean) {
-      if (running) return;
-      running = true;
-      lockedRun = lock;
-      completed = false;
-      faded = false;
-      const my = ++token;
-
-      setBlack(1);
-      setTitle(1);
-      if (lock) lockScroll(true);
-      if (video) { try { video.pause(); video.currentTime = 0; } catch {} }
-
-      await wait(TITLE_MS);
-      if (my !== token) return;
-
-      setTitle(0);
-      setBlack(0);
-      if (video) {
-        video.muted = true;       // video sempre muto
-        try {
-          await video.play();
-        } catch {
-          if (lock) lockScroll(false);
-        }
-      }
-    }
-
-    // --- Eventi video ---
-    if (video) {
-      video.addEventListener('timeupdate', () => {
-        const d = video.duration || 0;
-        if (d > 0 && !faded && video.currentTime >= d - END_FADE_S) {
-          faded = true;
-          setBlack(1); // dissolvenza al nero (blend col fondo)
-        }
-      });
-      video.addEventListener('ended', finish);
-    }
-
-    // --- Riparte tornando in cima (autostart, senza ribloccare lo scroll) ---
-    const io = new IntersectionObserver(
-      (entries) => {
-        const e = entries[0];
-        if (e.isIntersecting && e.intersectionRatio >= 0.9 && completed && !running) {
-          run(false);
-        }
-      },
-      { threshold: [0, 0.9, 1] },
-    );
-    io.observe(section);
-
-    // --- Avvio: prima visita -> 2s di titolo, autostart muto, scroll bloccato
-    if (reduce) {
-      setBlack(0);
-      setTitle(0);
-      lockScroll(false);
-    } else if (video) {
-      run(true);
-    } else if (canvas) {
-      setupCanvas(canvas);
-    }
-
-    // ---------------- CANVAS (fallback senza video) ----------------
-    function setupCanvas(cv: HTMLCanvasElement) {
-      const ctx = cv.getContext('2d')!;
-      let w = 0, h = 0, dpr = 1;
-      const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
-      const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-      const smooth = (e0: number, e1: number, x: number) => {
-        const t = clamp((x - e0) / (e1 - e0));
-        return t * t * (3 - 2 * t);
-      };
-      const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-
-      function resize() {
-        dpr = Math.min(window.devicePixelRatio || 1, 2);
-        w = cv.clientWidth; h = cv.clientHeight;
-        cv.width = Math.floor(w * dpr); cv.height = Math.floor(h * dpr);
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      }
-      function roundRect(x: number, y: number, ww: number, hh: number, r: number) {
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.arcTo(x + ww, y, x + ww, y + hh, r);
-        ctx.arcTo(x + ww, y + hh, x, y + hh, r);
-        ctx.arcTo(x, y + hh, x, y, r);
-        ctx.arcTo(x, y, x + ww, y, r);
-        ctx.closePath();
-      }
-      function drawWheel(x: number, y: number, r: number, ang: number) {
-        ctx.save(); ctx.translate(x, y);
-        ctx.fillStyle = '#020405';
-        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-        ctx.rotate(ang);
-        ctx.strokeStyle = 'rgba(63,154,166,0.5)';
-        ctx.lineWidth = Math.max(1, r * 0.12);
-        for (let i = 0; i < 4; i++) {
-          ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -r * 0.7); ctx.stroke();
-          ctx.rotate(Math.PI / 2);
-        }
-        ctx.restore();
-      }
-      function drawCar(cx: number, cy: number, s: number, ang: number, light: number, brake: number) {
-        const L = w * 0.22 * s, H = L * 0.30, wr = H * 0.42;
-        ctx.save(); ctx.translate(cx, cy);
-        const sh = ctx.createRadialGradient(0, H * 0.95, 0, 0, H * 0.95, L * 0.62);
-        sh.addColorStop(0, 'rgba(0,0,0,0.6)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = sh;
-        ctx.beginPath(); ctx.ellipse(0, H * 0.98, L * 0.62, H * 0.28, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#04090b';
-        roundRect(-L / 2, -H * 0.2, L, H, H * 0.42); ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(-L * 0.26, -H * 0.2); ctx.lineTo(-L * 0.14, -H * 0.78);
-        ctx.lineTo(L * 0.16, -H * 0.78); ctx.lineTo(L * 0.30, -H * 0.2);
-        ctx.closePath(); ctx.fill();
-        ctx.fillStyle = 'rgba(63,154,166,0.16)';
-        ctx.beginPath();
-        ctx.moveTo(-L * 0.20, -H * 0.24); ctx.lineTo(-L * 0.10, -H * 0.70);
-        ctx.lineTo(L * 0.12, -H * 0.70); ctx.lineTo(L * 0.24, -H * 0.24);
-        ctx.closePath(); ctx.fill();
-        drawWheel(-L * 0.30, H * 0.78, wr, ang);
-        drawWheel(L * 0.30, H * 0.78, wr, ang);
-        const hx = -L * 0.5, hy = H * 0.18;
-        if (light > 0.01) {
-          ctx.fillStyle = `rgba(190,236,240,${0.9 * light})`;
-          ctx.beginPath(); ctx.arc(hx, hy, H * 0.12, 0, Math.PI * 2); ctx.fill();
-        }
-        ctx.restore();
-        if (light > 0.01) {
-          const bx = cx + hx, by = cy + hy;
-          const beam = ctx.createLinearGradient(bx, by, bx - L * 1.6, by + H * 1.2);
-          beam.addColorStop(0, `rgba(170,230,235,${0.28 * light})`);
-          beam.addColorStop(1, 'rgba(170,230,235,0)');
-          ctx.fillStyle = beam;
-          ctx.beginPath();
-          ctx.moveTo(bx, by - H * 0.1); ctx.lineTo(bx - L * 1.7, by + H * 1.5);
-          ctx.lineTo(bx - L * 1.7, by + H * 3.2); ctx.lineTo(bx, by + H * 0.5);
-          ctx.closePath(); ctx.fill();
-        }
-      }
-      function draw(sp: number, time: number) {
-        ctx.clearRect(0, 0, w, h);
-        const VPx = w * 0.5, VPy = h * 0.42, groundY = h * 0.99;
-        const flick = 0.85 + Math.sin(time * 0.004) * 0.06;
-        const sky = ctx.createLinearGradient(0, 0, 0, h);
-        sky.addColorStop(0, '#02080a'); sky.addColorStop(0.6, '#010405'); sky.addColorStop(1, '#000');
-        ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
-        const nearL = w * 0.06, nearR = w * 0.94;
-        const farL = VPx - w * 0.05, farR = VPx + w * 0.05, farY = VPy + h * 0.02;
-        const road = ctx.createLinearGradient(0, farY, 0, groundY);
-        road.addColorStop(0, '#031a1e'); road.addColorStop(1, '#000');
-        ctx.fillStyle = road;
-        ctx.beginPath();
-        ctx.moveTo(nearL, groundY); ctx.lineTo(nearR, groundY);
-        ctx.lineTo(farR, farY); ctx.lineTo(farL, farY); ctx.closePath(); ctx.fill();
-        const lampX = w * 0.2, lampTop = h * 0.18, curbY = h * 0.7;
-        const lg = ctx.createRadialGradient(lampX + w * 0.05, lampTop, 0, lampX + w * 0.05, lampTop, w * 0.04);
-        lg.addColorStop(0, `rgba(150,230,235,${0.5 * flick})`); lg.addColorStop(1, 'rgba(150,230,235,0)');
-        ctx.fillStyle = lg; ctx.fillRect(0, 0, w, h);
-        const drive = easeOutCubic(clamp(sp / 0.82));
-        const carX = lerp(w * 1.25, w * 0.4, drive);
-        const dist = (w * 1.25 - carX) / (h * 0.05);
-        const light = 1 - smooth(0.8, 1, sp);
-        drawCar(carX, h * 0.82, lerp(1.05, 0.92, drive), -dist, light, 0);
-        const vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.25, w / 2, h / 2, h * 0.85);
-        vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.75)');
-        ctx.fillStyle = vig; ctx.fillRect(0, 0, w, h);
-      }
-      window.addEventListener('resize', resize);
-      resize();
-      // titolo poi scena in loop (ping-pong)
-      wait(TITLE_MS).then(() => { setTitle(0); setBlack(0); lockScroll(false); });
-      let raf = 0;
-      function loop() {
-        const t = performance.now();
-        const cyc = (t / 9000) % 2;
-        draw(cyc < 1 ? cyc : 2 - cyc, t);
-        raf = requestAnimationFrame(loop);
-      }
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) cancelAnimationFrame(raf);
-        else loop();
-      });
-      loop();
-    }
-  }
 </script>
